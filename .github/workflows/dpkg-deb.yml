@@ -23,6 +23,10 @@ jobs:
       - name: Echo pwd
         run: pwd
       
+      # Echo ls
+      - name: Echo ls
+        run: ls -la
+      
       # Build the Debian package
       - name: Build package
         run: dpkg-deb --build src  # Replace with your package name
