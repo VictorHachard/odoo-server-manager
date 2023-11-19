@@ -37,6 +37,49 @@ PYTHON_DEPENDENCIES = [
 ROOT = '/opt/odoo/'
 
 
+def check_if_port_is_free(port):
+    """
+    Check if a port is free
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) != 0
+
+
+def check_if_port_is_available(port):
+    """
+    Check if a port is available from all the odoo instances
+    """
+    for instance_name in os.listdir("/opt/odoo"):
+        instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
+        if instance_data.port == port or instance_data.longpolling_port == port:
+            return False
+    return True
+
+
+def check_if_port_is_valid(port):
+    """
+    Check if a port is valid
+    """
+    return 1024 < port < 65535
+
+
+def check_port(port):
+    """
+    Check if a port is free, available and valid
+    """
+    if check_if_port_is_free(port):
+        if check_if_port_is_available(port):
+            if check_if_port_is_valid(port):
+                return True
+            else:
+                print(f"Port {port} is not valid")
+        else:
+            print(f"Port {port} is not available")
+    else:
+        print(f"Port {port} is not free")
+    return False
+
+
 class User:
     def __init__(self, odoo_instance, username):
         self.odoo_instance = odoo_instance
@@ -64,6 +107,11 @@ class OdooInstance:
         self.port = port
         self.longpolling_port = longpolling_port
         self.user = []
+        # Check if port is free
+        if not check_port(self.port):
+            raise ValueError("Port is not free")
+        if not check_port(self.longpolling_port):
+            raise ValueError("Longpolling port is not free")
 
     def add_user(self, username):
         user = User(self, username)
@@ -248,7 +296,7 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
-    """)
+""")
         print("Creating service symbolic link")
         os.symlink(f"/etc/systemd/system/{self.instance_name}.service", f"/etc/systemd/system/multi-user.target.wants/{self.instance_name}.service")
 
@@ -257,7 +305,7 @@ WantedBy=multi-user.target
             pickle.dump(self, f)
 
     def __str__(self):
-        return f"{self.instance_name} - {self.odoo_version} - {self.create_datetime}"
+        return f"{self.instance_name} - {self.odoo_version} - {self.port} - {self.longpolling_port} - {self.create_datetime}"
 
 
 def load_instance_data(file_path):
@@ -300,7 +348,7 @@ def _install_wkhtmltopdf():
         package_url = "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb"
 
     subprocess.run(["wget", package_url])
-    subprocess.run(["sudo", "apt-get", "install", package_url.split("/")[-1], "-y"])
+    subprocess.run(["sudo", "apt-get", "install", "./" + package_url.split("/")[-1], "-y"])
     subprocess.run(["sudo", "rm", package_url.split("/")[-1]])
 
 
