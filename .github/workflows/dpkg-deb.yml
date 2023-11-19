@@ -29,7 +29,9 @@ jobs:
       
       # Build the Debian package
       - name: Build package
-        run: dpkg-deb --build src  # Replace with your package name
+        run: |
+          cd ..
+          dpkg-deb --build odoo-server-manager
 
       # Upload the built package as an artifact
       - name: Upload package artifact
