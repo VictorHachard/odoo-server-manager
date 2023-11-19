@@ -1,0 +1,31 @@
+name: Build Debian Package
+
+on:
+  push:
+    branches:
+      - main  # Modify this according to your branch
+
+jobs:
+  build-deb-package:
+    runs-on: ubuntu-latest  # Use the appropriate runner for your requirements
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Install necessary dependencies for building the package
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debhelper dh-make dh-python
+
+      # Build the Debian package
+      - name: Build package
+        run: dpkg-deb --build src  # Replace with your package name
+
+      # Upload the built package as an artifact
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: deb-package
+          path: src.deb
