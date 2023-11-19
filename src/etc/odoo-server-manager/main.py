@@ -5,8 +5,8 @@ import os
 import re
 import subprocess
 
-from . import OdooInstance, load_instance_data
-from . import ROOT
+from instance import OdooInstance, load_instance_data
+from __init__ import ROOT
 
 
 PYTHON_DEPENDENCIES = [

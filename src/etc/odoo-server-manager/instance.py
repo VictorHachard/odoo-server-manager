@@ -4,7 +4,7 @@ import subprocess
 import random
 import socket
 
-from . import ROOT
+from __init__ import ROOT
 
 
 def check_if_port_is_free(port):
