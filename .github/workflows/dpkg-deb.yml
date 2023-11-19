@@ -19,6 +19,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y debhelper dh-make dh-python
 
+      # Echo pwd
+      - name: Echo pwd
+        run: pwd
+      
       # Build the Debian package
       - name: Build package
         run: dpkg-deb --build src  # Replace with your package name
