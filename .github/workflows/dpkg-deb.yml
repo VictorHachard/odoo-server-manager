@@ -23,6 +23,10 @@ jobs:
           chmod 0555 src/DEBIAN/postinst
           chmod 0555 src/DEBIAN/postrm
 
+      - name: Move files and folders
+        run: |
+          mv src/odoo-server-manager src/etc/odoo-server-manager
+      
       - name: Build package
         run: |
           dpkg-deb --build src
