@@ -70,10 +70,20 @@ class User:
 
 
 class OdooInstance:
-    def __init__(self, instance_name, odoo_version, create_datetime, port, longpolling_port):
+    def __init__(
+            self,
+            instance_name: str,
+            odoo_version: str,
+            create_datetime: datetime.datetime = datetime.datetime.now(),
+            port: int = 8069,
+            longpolling_port: int = 8072,
+            friendly_name: str = None,
+    ):
+        self.name = friendly_name if friendly_name else instance_name
         self.instance_name = instance_name
         self.odoo_version = odoo_version
         self.create_datetime = create_datetime
+        self.last_update_datetime = None
         self.port = port
         self.longpolling_port = longpolling_port
         self.user = []
@@ -109,6 +119,7 @@ class OdooInstance:
         # Copy setup/odoo to src/odoo-bin
         subprocess.run(f"sudo cp {ROOT}{self.instance_name}/src/setup/odoo {ROOT}{self.instance_name}/src/odoo-bin", shell=True)
 
+        self.last_update_datetime = datetime.datetime.now()
         self.update_requirements()
 
     def update_requirements(self):
@@ -225,6 +236,7 @@ server {{
 """)
         print("Creating nginx symbolic link")
         os.symlink(nginx_config_file, f"/etc/nginx/sites-enabled/{self.instance_name}")
+        subprocess.run(["sudo", "systemctl", "restart", "nginx"])
 
     def create_odoo_config(self):
         print("Creating odoo config")
@@ -281,8 +293,20 @@ WantedBy=multi-user.target
     def restart(self):
         subprocess.run(["sudo", "systemctl", "restart", self.instance_name + ".service"])
 
+    def is_running(self):
+        return subprocess.run(["sudo", "systemctl", "is-active", self.instance_name + ".service"]).returncode == 0
+
     def __str__(self):
-        return f"{self.instance_name} - {self.odoo_version} - {self.port} - {self.longpolling_port} - {self.create_datetime}"
+        return f"{self.instance_name} - {self.odoo_version} - {'Running' if self.is_running() else 'Stopped'}"
+
+    def print_details(self):
+        print(f"Instance {self.instance_name} details")
+        print(f"    Name: {self.name}")
+        print(f"    Instance name: {self.instance_name}")
+        print(f"    Odoo version: {self.odoo_version}")
+        print(f"    Port: {self.port}")
+        print(f"    Longpolling port: {self.longpolling_port}")
+        print(f"    Create datetime: {self.create_datetime}")
 
 
 def load_instance_data(file_path):

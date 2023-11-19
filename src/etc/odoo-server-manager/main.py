@@ -72,58 +72,109 @@ def _install_wkhtmltopdf():
     subprocess.run(["sudo", "rm", package_url.split("/")[-1]])
 
 
+def parse_args(args):
+    """
+    Parse the arguments and return them as a dictionary
+    """
+    return {(args[i]).replace('-', ''): args[i + 1] for i in range(0, len(args), 2)}
+
+
+def check_args(args):
+    """
+    Check if the arguments are valid
+    """
+    if len(args) % 2 != 0:
+        print("Please provide a value for each argument")
+        sys.exit(1)
+    for i in range(0, len(args), 2):
+        if args[i].replace('-', '') not in ['v', 'n', 'p', 'l', 'i', 'u']:
+            print(f"Unknown argument: {args[i]}")
+            sys.exit(1)
+
+
 if __name__ == "__main__":
-    # first argument is the operation (list, create, delete, add_user, journal)
-    # if delete, the second argument is the instance name
-    # if create, the second argument is the odoo version
+    """
+    First argument is the operation (list, create, delete, add_user, journal)
+    if create:
+        -v odoo_version (x.x) (required) (example: 16.0)
+        -n friendly_name (optional) (example: "odoo-16")
+        -p port (required) (example: 8069)
+        -l longpolling_port (required) (example: 8072)
+    if update:
+        -i instance_name (required)
+    if delete:
+        -n instance_name (required)
+    if add_user: 
+        -i instance_name (required)
+        -u username (required) (example: admin)
+    if journal:
+        -i instance_name (required)
+    """
     if not os.path.exists("/opt/odoo"):
         subprocess.run(["sudo", "mkdir", "/opt/odoo"])
     if len(sys.argv) < 2:
         print("Please provide an operation (list, create, delete, add_user)")
         sys.exit(1)
+    check_args(sys.argv[2:])
+    args = parse_args(sys.argv[2:])
     operation = sys.argv[1]
     if operation == "list":
-        # List all instances name, version and creation date
         for instance_name in os.listdir("/opt/odoo"):
             instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
             print(instance_data)
     elif operation == "create":
-        odoo_version = sys.argv[2]
-        if len(sys.argv) >= 4:
-            port = int(sys.argv[3])
-        else:
-            port = 8069
-        if len(sys.argv) >= 5:
-            longpolling_port = int(sys.argv[4])
-        else:
-            longpolling_port = 8072
+        if 'v' not in args or 'p' not in args or 'l' not in args:
+            print("Please provide an odoo_version, a port and a longpolling_port")
+            sys.exit(1)
+        if args['v'] not in ["16.0", "17.0"]:
+            print("Please provide a valid odoo_version (16.0, 17.0)")
+            sys.exit(1)
         _install_odoo_dependencies()
         _install_wkhtmltopdf()
         create_datetime = datetime.datetime.now()
-        instance_name = hashlib.md5(f"{odoo_version}-{create_datetime}".encode()).hexdigest()
-        instance = OdooInstance(instance_name, odoo_version, create_datetime, port, longpolling_port)
+        instance_name = hashlib.md5(f"{args['v']}-{create_datetime}".encode()).hexdigest()
+        instance = OdooInstance(
+            friendly_name=args['n'] if 'n' in args else '',
+            instance_name=instance_name,
+            odoo_version=args['v'],
+            create_datetime=create_datetime,
+            port=int(args['p']),
+            longpolling_port=int(args['l'])
+        )
         instance.create()
         instance.update_odoo_code()
         instance.save()
         instance.restart()
+    elif operation == "update":
+        if 'i' not in args:
+            print("Please provide an instance name")
+            sys.exit(1)
+        instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        instance.update_odoo_code()
+        instance.restart()
     elif operation == "delete":
-        instance_name = sys.argv[2]
+        if 'i' not in args:
+            print("Please provide an instance name")
+            sys.exit(1)
         print("Deleting instance...")
-        subprocess.run(["sudo", "rm", "-rf", f"{ROOT}{instance_name}"])
-        subprocess.run(["sudo", "rm", "-rf", f"/etc/nginx/sites-available/{instance_name}"])
-        subprocess.run(["sudo", "rm", "-rf", f"/etc/nginx/sites-enabled/{instance_name}"])
-        subprocess.run(["sudo", "rm", "-rf", f"/etc/systemd/system/{instance_name}.service"])
-        subprocess.run(["sudo", "rm", "-rf", f"/etc/systemd/system/multi-user.target.wants/{instance_name}.service"])
+        subprocess.run(["sudo", "rm", "-rf", f"{ROOT}{args['i']}"])
+        subprocess.run(["sudo", "rm", "-rf", f"/etc/nginx/sites-available/{args['i']}"])
+        subprocess.run(["sudo", "rm", "-rf", f"/etc/nginx/sites-enabled/{args['i']}"])
+        subprocess.run(["sudo", "rm", "-rf", f"/etc/systemd/system/{args['i']}.service"])
+        subprocess.run(["sudo", "rm", "-rf", f"/etc/systemd/system/multi-user.target.wants/{args['i']}.service"])
         subprocess.run(["sudo", "systemctl", "daemon-reload"])
         subprocess.run(["sudo", "systemctl", "restart", "nginx"])
         subprocess.run(["sudo", "systemctl", "restart", "postgresql"])
     elif operation == "add_user":
-        instance_name = sys.argv[2]
-        username = sys.argv[3]
-        instance = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
-        instance.add_user(username)
+        if 'i' not in args or 'u' not in args:
+            print("Please provide an instance name and a username")
+            sys.exit(1)
+        instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        instance.add_user(args['u'])
         instance.save()
     elif operation == "journal":
-        instance_name = sys.argv[2]
-        instance = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
+        if 'i' not in args:
+            print("Please provide an instance name")
+            sys.exit(1)
+        instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
         instance.print_journal()
