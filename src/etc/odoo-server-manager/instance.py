@@ -233,7 +233,8 @@ server {{
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo.conf", shell=True)
         with open(f"{ROOT}{self.instance_name}/odoo.conf", "w") as f:
             f.write(f"""[options]
-addons_path = {ROOT}{self.instance_name}/src/addons, {ROOT}{self.instance_name}/custom_addons
+admin_passwd = odoo
+addons_path = {ROOT}{self.instance_name}/src/odoo/addons, {ROOT}{self.instance_name}/custom_addons
 logfile = {ROOT}{self.instance_name}/logs/odoo.log
 db_host = localhost
 db_port = 5432
@@ -273,6 +274,12 @@ WantedBy=multi-user.target
     def save(self):
         with open(f"{ROOT}{self.instance_name}/instance_data.pkl", "wb") as f:
             pickle.dump(self, f)
+
+    def print_journal(self):
+        subprocess.run(["sudo", "journalctl", "-u", self.instance_name + ".service", "-n", "100", "-f"])
+
+    def restart(self):
+        subprocess.run(["sudo", "systemctl", "restart", self.instance_name + ".service"])
 
     def __str__(self):
         return f"{self.instance_name} - {self.odoo_version} - {self.port} - {self.longpolling_port} - {self.create_datetime}"

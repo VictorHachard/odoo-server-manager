@@ -73,7 +73,7 @@ def _install_wkhtmltopdf():
 
 
 if __name__ == "__main__":
-    # first argument is the operation (list, create, delete)
+    # first argument is the operation (list, create, delete, add_user, journal)
     # if delete, the second argument is the instance name
     # if create, the second argument is the odoo version
     if not os.path.exists("/opt/odoo"):
@@ -89,14 +89,23 @@ if __name__ == "__main__":
             print(instance_data)
     elif operation == "create":
         odoo_version = sys.argv[2]
+        if sys.argv == 4:
+            port = sys.argv[3]
+        else:
+            port = 8069
+        if sys.argv == 5:
+            longpolling_port = sys.argv[4]
+        else:
+            longpolling_port = 8072
         _install_odoo_dependencies()
         _install_wkhtmltopdf()
         create_datetime = datetime.datetime.now()
         instance_name = hashlib.md5(f"{odoo_version}-{create_datetime}".encode()).hexdigest()
-        instance = OdooInstance(instance_name, odoo_version, create_datetime)
+        instance = OdooInstance(instance_name, odoo_version, create_datetime, port, longpolling_port)
         instance.create()
         instance.update_odoo_code()
         instance.save()
+        instance.restart()
     elif operation == "delete":
         instance_name = sys.argv[2]
         print("Deleting instance...")
@@ -114,3 +123,7 @@ if __name__ == "__main__":
         instance = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
         instance.add_user(username)
         instance.save()
+    elif operation == "journal":
+        instance_name = sys.argv[2]
+        instance = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
+        instance.print_journal()
