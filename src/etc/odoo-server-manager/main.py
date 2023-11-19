@@ -116,8 +116,9 @@ if __name__ == "__main__":
     operation = sys.argv[1]
     if operation == "list":
         for instance_name in os.listdir("/opt/odoo"):
-            instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
-            print(instance_data)
+            if os.path.isdir(f"{ROOT}{instance_name}") and os.path.exists(f"{ROOT}{instance_name}/instance_data.pkl"):
+                instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
+                print(instance_data)
     elif operation == "create":
         if 'v' not in args or 'p' not in args or 'l' not in args:
             print("Please provide an odoo_version, a port and a longpolling_port")

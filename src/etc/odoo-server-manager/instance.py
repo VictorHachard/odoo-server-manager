@@ -3,6 +3,7 @@ import pickle
 import subprocess
 import random
 import socket
+import datetime
 
 from __init__ import ROOT
 
@@ -20,9 +21,10 @@ def check_if_port_is_available(port):
     Check if a port is available from all the odoo instances
     """
     for instance_name in os.listdir("/opt/odoo"):
-        instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
-        if int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
-            return False
+        if os.path.isdir(f"{ROOT}{instance_name}") and os.path.exists(f"{ROOT}{instance_name}/instance_data.pkl"):
+            instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
+            if int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
+                return False
     return True
 
 
@@ -98,6 +100,20 @@ class OdooInstance:
         user.create()
         self.user.append(user)
 
+    ############################
+    # Utils methods
+    ############################
+
+    def chown(self):
+        subprocess.run(f"sudo chown -R {self.instance_name}:{self.instance_name} {ROOT}{self.instance_name}", shell=True)
+
+    def _venv_exists(self):
+        return os.path.exists(f"{ROOT}{self.instance_name}/venv")
+
+    ############################
+    # Update methods
+    ############################
+
     def update_odoo_code(self):
         if os.path.exists(f"{ROOT}{self.instance_name}/update_temp"):
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/update_temp", shell=True)
@@ -128,11 +144,9 @@ class OdooInstance:
         if os.path.exists(f"{ROOT}{self.instance_name}/src/requirements.txt"):
             subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install wheel && pip3 install -r {ROOT}{self.instance_name}/src/requirements.txt && deactivate\"", shell=True)
 
-    def chown(self):
-        subprocess.run(f"sudo chown -R {self.instance_name}:{self.instance_name} {ROOT}{self.instance_name}", shell=True)
-
-    def _venv_exists(self):
-        return os.path.exists(f"{ROOT}{self.instance_name}/venv")
+    ############################
+    # Create methods
+    ############################
 
     def create(self):
         self.create_user()
@@ -142,6 +156,12 @@ class OdooInstance:
         self.create_odoo_config()
         self.create_service_config()
         self.create_ngnix_config()
+
+    def create_user(self):
+        print("Creating user")
+        subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{self.instance_name} {self.instance_name}",
+                       shell=True)
+        subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}", shell=True)
 
     def create_folder_structure(self):
         if not os.path.exists(f"{ROOT}{self.instance_name}"):
@@ -155,7 +175,7 @@ class OdooInstance:
         subprocess.run(["sudo", "-u", "postgres", "createuser", "-d", "-r", "-s", self.instance_name])
         line = "/# Database administrative login by Unix domain socket/i host    all    " + self.instance_name + "    127.0.0.1/32    trust"
         subprocess.run(["sudo", "sed", "-i", line, "/etc/postgresql/14/main/pg_hba.conf"])
-        subprocess.run(["sudo", "systemctl", "restart", "postgresql"])
+        self.restart_postgresql()
 
     def create_venv(self):
         print("Creating venv")
@@ -165,10 +185,50 @@ class OdooInstance:
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/venv", shell=True)
         subprocess.run(f"sudo -u {self.instance_name} bash -c \"python3 -m venv {ROOT}{self.instance_name}/venv\"", shell=True)
 
-    def create_user(self):
-        print("Creating user")
-        subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{self.instance_name} {self.instance_name}", shell=True)
-        subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}", shell=True)
+    def create_odoo_config(self):
+        print("Creating odoo config")
+        if os.path.exists(f"{ROOT}{self.instance_name}/odoo.conf"):
+            print("Removing old odoo config")
+            subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo.conf", shell=True)
+        with open(f"{ROOT}{self.instance_name}/odoo.conf", "w") as f:
+            f.write(f"""[options]
+admin_passwd = odoo
+addons_path = {ROOT}{self.instance_name}/src/odoo/addons, {ROOT}{self.instance_name}/custom_addons
+logfile = {ROOT}{self.instance_name}/logs/odoo.log
+db_host = localhost
+db_port = 5432
+db_user = {self.instance_name}
+db_password = {self.instance_name}
+db_name = {self.instance_name}
+http_port = {self.port}
+longpolling_port = {self.longpolling_port}
+""")
+
+    def create_service_config(self):
+        print("Creating service config")
+        if os.path.exists(f"/etc/systemd/system/{self.instance_name}.service"):
+            print("Removing old service config")
+            subprocess.run(f"sudo rm -rf /etc/systemd/system/{instance_name}.service", shell=True)
+        with open(f"/etc/systemd/system/{self.instance_name}.service", "w") as f:
+            f.write(f"""[Unit]
+Description=Odoo Instance {self.instance_name}
+Requires=postgresql.service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+SyslogIdentifier={self.instance_name}
+PermissionsStartOnly=true
+ExecStart={ROOT}{self.instance_name}/venv/bin/python {ROOT}{self.instance_name}/src/odoo-bin -c {ROOT}{self.instance_name}/odoo.conf
+User={self.instance_name}
+Group={self.instance_name}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+""")
+        print("Creating service symbolic link")
+        self.enable()
 
     def create_ngnix_config(self):
         print("Creating nginx config")
@@ -179,8 +239,7 @@ class OdooInstance:
             print("Removing old nginx config (available)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
 
-        nginx_config_file = f"/etc/nginx/sites-available/{self.instance_name}"
-        with open(nginx_config_file, "w") as f:
+        with open(f"/etc/nginx/sites-available/{self.instance_name}", "w") as f:
             f.write(f"""#server {{
 #  listen 80;
 #  listen [::]:80;
@@ -234,67 +293,99 @@ server {{
         add_header Cache-Control "public, no-transform";
     }}
 """)
-        print("Creating nginx symbolic link")
-        os.symlink(nginx_config_file, f"/etc/nginx/sites-enabled/{self.instance_name}")
+        self.enable_site()
+        self.reload_nginx()
+
+    ############################
+    # Delete methods
+    ############################
+
+    def delete(self):
+        command = f"sudo -u postgres psql -c 'DROP DATABASE IF EXISTS (SELECT datname FROM pg_database WHERE datdba = (SELECT usesysid FROM pg_user WHERE usename = \'{self.instance_name}\'));'"
+        subprocess.run(command, shell=True)
+        subprocess.run(f"sudo -u postgres dropuser {self.instance_name}", shell=True)
+
+        line = "/host    all    " + self.instance_name + "    127.0.0.1/32    trust/d"
+        subprocess.run(["sudo", "sed", "-i", line, "/etc/postgresql/14/main/pg_hba.conf"])
+
+        self.disable()
+        subprocess.run(f"sudo rm -rf /etc/systemd/system/{self.instance_name}.service", shell=True)
+
+        subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
+        subprocess.run(f"sudo rm -rf /etc/nginx/sites-enabled/{self.instance_name}", shell=True)
+
+        subprocess.run(["sudo", "systemctl", "daemon-reload"])
+        subprocess.run(["sudo", "systemctl", "restart", "nginx"])
+        subprocess.run(["sudo", "systemctl", "restart", "postgresql"])
+
+        subprocess.run(f"sudo userdel -r {self.instance_name}", shell=True)
+        subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}", shell=True)
+
+    ############################
+    # Service methods
+    ############################
+
+    def is_running(self):
+        return subprocess.run(["sudo", "systemctl", "is-active", self.instance_name + ".service"], stdout=subprocess.PIPE).returncode == 0
+
+    def restart(self):
+        subprocess.run(["sudo", "systemctl", "restart", self.instance_name + ".service"])
+
+    def start(self):
+        subprocess.run(["sudo", "systemctl", "start", self.instance_name + ".service"])
+
+    def stop(self):
+        subprocess.run(["sudo", "systemctl", "stop", self.instance_name + ".service"])
+
+    def enable(self):
+        subprocess.run(["sudo", "systemctl", "enable", self.instance_name + ".service"])
+
+    def disable(self):
+        subprocess.run(["sudo", "systemctl", "disable", self.instance_name + ".service"])
+
+    def status(self):
+        subprocess.run(["sudo", "systemctl", "status", self.instance_name + ".service"])
+
+    def reload(self):
+        subprocess.run(["sudo", "systemctl", "reload", self.instance_name + ".service"])
+
+    def journal(self, lines=100, follow=False):
+        if follow:
+            subprocess.run(["sudo", "journalctl", "-u", self.instance_name + ".service", "-f"])
+        else:
+            subprocess.run(["sudo", "journalctl", "-u", self.instance_name + ".service", "-n", str(lines)])
+
+    ############################
+    # Other Service methods
+    ############################
+
+    def restart_nginx(self):
         subprocess.run(["sudo", "systemctl", "restart", "nginx"])
 
-    def create_odoo_config(self):
-        print("Creating odoo config")
-        if os.path.exists(f"{ROOT}{self.instance_name}/odoo.conf"):
-            print("Removing old odoo config")
-            subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo.conf", shell=True)
-        with open(f"{ROOT}{self.instance_name}/odoo.conf", "w") as f:
-            f.write(f"""[options]
-admin_passwd = odoo
-addons_path = {ROOT}{self.instance_name}/src/odoo/addons, {ROOT}{self.instance_name}/custom_addons
-logfile = {ROOT}{self.instance_name}/logs/odoo.log
-db_host = localhost
-db_port = 5432
-db_user = {self.instance_name}
-db_password = {self.instance_name}
-db_name = {self.instance_name}
-http_port = {self.port}
-longpolling_port = {self.longpolling_port}
-""")
+    def reload_nginx(self):
+        subprocess.run(["sudo", "nginx", "-s", "reload"])
 
-    def create_service_config(self):
-        print("Creating service config")
-        if os.path.exists(f"/etc/systemd/system/{self.instance_name}.service"):
-            print("Removing old service config")
-            subprocess.run(f"sudo rm -rf /etc/systemd/system/{instance_name}.service", shell=True)
-        with open(f"/etc/systemd/system/{self.instance_name}.service", "w") as f:
-            f.write(f"""[Unit]
-Description=Odoo Instance {self.instance_name}
-Requires=postgresql.service
-After=network.target postgresql.service
+    def enable_site(self):
+        subprocess.run(["sudo", "ln", "-s", "/etc/nginx/sites-available/" + self.instance_name, "/etc/nginx/sites-enabled/" + self.instance_name])
 
-[Service]
-Type=simple
-SyslogIdentifier={self.instance_name}
-PermissionsStartOnly=true
-ExecStart={ROOT}{self.instance_name}/venv/bin/python {ROOT}{self.instance_name}/src/odoo-bin -c {ROOT}{self.instance_name}/odoo.conf
-User={self.instance_name}
-Group={self.instance_name}
-Restart=always
+    def disable_site(self):
+        if os.path.exists("/etc/nginx/sites-enabled/" + self.instance_name):
+            subprocess.run(["sudo", "rm", "/etc/nginx/sites-enabled/" + self.instance_name])
 
-[Install]
-WantedBy=multi-user.target
-""")
-        print("Creating service symbolic link")
-        os.symlink(f"/etc/systemd/system/{self.instance_name}.service", f"/etc/systemd/system/multi-user.target.wants/{self.instance_name}.service")
+    def restart_postgresql(self):
+        subprocess.run(["sudo", "systemctl", "restart", "postgresql"])
+
+    ############################
+    # Save methods
+    ############################
 
     def save(self):
         with open(f"{ROOT}{self.instance_name}/instance_data.pkl", "wb") as f:
             pickle.dump(self, f)
 
-    def print_journal(self):
-        subprocess.run(["sudo", "journalctl", "-u", self.instance_name + ".service", "-n", "100", "-f"])
-
-    def restart(self):
-        subprocess.run(["sudo", "systemctl", "restart", self.instance_name + ".service"])
-
-    def is_running(self):
-        return subprocess.run(["sudo", "systemctl", "is-active", self.instance_name + ".service"]).returncode == 0
+    ############################
+    # Print methods
+    ############################
 
     def __str__(self):
         return f"{self.instance_name} - {self.odoo_version} - {'Running' if self.is_running() else 'Stopped'}"
