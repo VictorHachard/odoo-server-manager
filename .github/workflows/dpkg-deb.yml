@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Install necessary dependencies for building the package
       - name: Install build dependencies
@@ -35,7 +35,7 @@ jobs:
 
       # Upload the built package as an artifact
       - name: Upload package artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: deb-package
-          path: src.deb
+          path: odoo-server-manager.deb
