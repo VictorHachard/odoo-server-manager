@@ -89,11 +89,11 @@ if __name__ == "__main__":
             print(instance_data)
     elif operation == "create":
         odoo_version = sys.argv[2]
-        if sys.argv == 4:
+        if len(sys.argv) >= 4:
             port = sys.argv[3]
         else:
             port = 8069
-        if sys.argv == 5:
+        if len(sys.argv) >= 5:
             longpolling_port = sys.argv[4]
         else:
             longpolling_port = 8072

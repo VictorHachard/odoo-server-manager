@@ -70,7 +70,7 @@ class User:
 
 
 class OdooInstance:
-    def __init__(self, instance_name, odoo_version, create_datetime, port=8069, longpolling_port=8072):
+    def __init__(self, instance_name, odoo_version, create_datetime, port, longpolling_port):
         self.instance_name = instance_name
         self.odoo_version = odoo_version
         self.create_datetime = create_datetime
