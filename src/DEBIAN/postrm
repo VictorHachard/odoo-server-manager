@@ -1,4 +1,6 @@
 #!/bin/bash
 
+set -e
+
 # Remove the alias from .bashrc
 sed -i '/^alias odoo-server-manager=/d' ~/.bashrc
