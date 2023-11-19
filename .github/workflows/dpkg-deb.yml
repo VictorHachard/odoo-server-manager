@@ -22,10 +22,6 @@ jobs:
         run: |
           chmod 0555 src/DEBIAN/postinst
           chmod 0555 src/DEBIAN/postrm
-
-      - name: Move files and folders
-        run: |
-          mv src/odoo-server-manager src/etc/odoo-server-manager
       
       - name: Build package
         run: |
@@ -33,7 +29,6 @@ jobs:
 
       - name: Rename package
         run: mv src.deb odoo-server-manager.deb
-
 
       - name: Upload package artifact
         uses: actions/upload-artifact@v3
