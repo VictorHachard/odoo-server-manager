@@ -90,11 +90,11 @@ if __name__ == "__main__":
     elif operation == "create":
         odoo_version = sys.argv[2]
         if len(sys.argv) >= 4:
-            port = sys.argv[3]
+            port = int(sys.argv[3])
         else:
             port = 8069
         if len(sys.argv) >= 5:
-            longpolling_port = sys.argv[4]
+            longpolling_port = int(sys.argv[4])
         else:
             longpolling_port = 8072
         _install_odoo_dependencies()
