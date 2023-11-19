@@ -1,4 +1,4 @@
-Package: odoo_server_manager
+Package: odoo-server-manager
 Version: 1.0
 Architecture: all
 Maintainer: Your Name <your-email@example.com>
