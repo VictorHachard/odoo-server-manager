@@ -22,6 +22,8 @@ jobs:
         run: |
           chmod 0555 src/DEBIAN/postinst
           chmod 0555 src/DEBIAN/postrm
+          chmod +x src/DEBIAN/postinst
+          chmod +x src/DEBIAN/postrm
       
       - name: Build package
         run: |

@@ -3,5 +3,6 @@
 set -e
 
 # Create an alias to run the instance.py file
+echo "alias odoo-server-manager='python3 /etc/odoo-server-manager/instance.py'" >> ~/.bashrc
 echo "alias osm='python3 /etc/odoo-server-manager/instance.py'" >> ~/.bashrc
 source ~/.bashrc || true  # Reload the shell configuration
