@@ -35,10 +35,6 @@ PYTHON_DEPENDENCIES = [
 
 
 def _install_odoo_dependencies():
-    # Check odoo_version with regex
-    if not re.match(r"\d+\.\d+", odoo_version):
-        raise ValueError("Invalid odoo_version format. Please use the format 'x.x'.")
-
     # Check if nginx is installed
     if not os.path.exists("/etc/nginx"):
         print("Installing nginx...")
@@ -58,7 +54,7 @@ def _install_odoo_dependencies():
 
 
 def _install_wkhtmltopdf():
-    if os.path.exists("/usr/local/bin/wkhtmltopdf"):
+    if subprocess.run(["which", "wkhtmltopdf"]).returncode == 0:
         return
     system_architecture = platform.machine()
 
