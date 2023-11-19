@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+# Remove the code directory from /etc
+rm -rf /etc/odoo-server-manager/src
+
+# Remove the alias from .bashrc
+sed -i '/^alias odoo-server-manager=/d' ~/.bashrc

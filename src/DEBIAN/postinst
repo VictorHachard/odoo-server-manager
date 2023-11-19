@@ -1,0 +1,9 @@
+#!/bin/bash
+# Move the odoo-server-manager code to /etc/odoo-server-manager/src
+mkdir -p /etc/odoo-server-manager/src
+mv /directory/odoo_server_manager /etc/odoo-server-manager/src
+rm -rf /directory/odoo_server_manager 
+
+# Create an alias to run the instance.py file
+echo "alias odoo-server-manager='python3 /etc/odoo-server-manager/src/instance.py'" >> ~/.bashrc
+source ~/.bashrc || true  # Reload the shell configuration

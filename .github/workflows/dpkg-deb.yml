@@ -13,29 +13,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Install necessary dependencies for building the package
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y debhelper dh-make dh-python
-
-      # Echo pwd
-      - name: Echo pwd
-        run: pwd
       
-      # Echo ls
-      - name: Echo ls
-        run: ls -la
-      
-      # Build the Debian package
       - name: Build package
         run: |
-          cd ..
-          dpkg-deb --build odoo-server-manager
+          dpkg-deb --build src
 
-      # Upload the built package as an artifact
+      - name: Rename package
+        run: mv src.deb odoo-server-manager.deb
+
       - name: Upload package artifact
         uses: actions/upload-artifact@v3
         with:
           name: deb-package
-          path: /home/runner/work/odoo-server-manager/odoo-server-manager.deb
+          path: odoo-server-manager.deb
