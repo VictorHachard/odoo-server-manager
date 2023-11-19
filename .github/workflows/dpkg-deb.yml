@@ -20,8 +20,8 @@ jobs:
 
       - name: Update chmod of postinst and postrm
         run: |
-          chmod >=0555 src/DEBIAN/postinst
-          chmod >=0555 src/DEBIAN/postrm
+          chmod 0555 src/DEBIAN/postinst
+          chmod 0555 src/DEBIAN/postrm
 
       - name: Build package
         run: |
