@@ -12,7 +12,7 @@ def check_if_port_is_free(port):
     Check if a port is free
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', port)) != 0
+        return s.connect_ex(('localhost', int(port))) != 0
 
 
 def check_if_port_is_available(port):
@@ -21,7 +21,7 @@ def check_if_port_is_available(port):
     """
     for instance_name in os.listdir("/opt/odoo"):
         instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
-        if instance_data.port == port or instance_data.longpolling_port == port:
+        if int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
             return False
     return True
 
@@ -30,7 +30,7 @@ def check_if_port_is_valid(port):
     """
     Check if a port is valid
     """
-    return 1024 < port < 65535
+    return 1024 < int(port) < 65535
 
 
 def check_port(port):
