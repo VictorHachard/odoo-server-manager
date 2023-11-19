@@ -1,7 +1,0 @@
-Package: odoo_server_manager
-Version: 1.0
-Architecture: all
-Maintainer: Your Name <your-email@example.com>
-Depends: nginx, postgresql, unzip, python3
-Description: Brief description of your package
- Long description of your package
