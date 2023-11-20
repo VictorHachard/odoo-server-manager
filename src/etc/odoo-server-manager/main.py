@@ -1,5 +1,3 @@
-import datetime
-import hashlib
 import sys
 import os
 import re
@@ -128,13 +126,9 @@ if __name__ == "__main__":
             sys.exit(1)
         _install_odoo_dependencies()
         _install_wkhtmltopdf()
-        create_datetime = datetime.datetime.now()
-        instance_name = hashlib.md5(f"{args['v']}-{create_datetime}".encode()).hexdigest()
         instance = OdooInstance(
             friendly_name=args['n'] if 'n' in args else '',
-            instance_name=instance_name,
             odoo_version=args['v'],
-            create_datetime=create_datetime,
             port=int(args['p']),
             longpolling_port=int(args['l'])
         )
@@ -157,6 +151,12 @@ if __name__ == "__main__":
             print("Please provide an instance name")
             sys.exit(1)
         print("Deleting instance...")
+        instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        if not instance:
+            print("Instance not found")
+            sys.exit(1)
+        for user in instance.users:
+            user.delete()
         subprocess.run(["sudo", "rm", "-rf", f"{ROOT}{args['i']}"])
         subprocess.run(["sudo", "rm", "-rf", f"/etc/nginx/sites-available/{args['i']}"])
         subprocess.run(["sudo", "rm", "-rf", f"/etc/nginx/sites-enabled/{args['i']}"])
@@ -184,3 +184,6 @@ if __name__ == "__main__":
             print("Instance not found")
             sys.exit(1)
         instance.print_journal()
+    else:
+        print("Unknown operation, please provide a valid operation (list, create, delete, add_user)")
+        sys.exit(1)

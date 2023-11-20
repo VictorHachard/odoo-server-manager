@@ -3,6 +3,7 @@ import pickle
 import subprocess
 import random
 import socket
+import hashlib
 import datetime
 
 from __init__ import ROOT
@@ -66,24 +67,26 @@ class User:
         new_password = self._generate_password()
         print(f"Creating user {self.username} with password {new_password}")
         subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{instance_name} {self.username}", shell=True)
-        subprocess.run(f"echo '{new_password}' | sudo passwd --stdin {self.username}", shell=True)
+        subprocess.run(f"echo {self.username}:{new_password} | sudo chpasswd", shell=True)
         subprocess.run(f"sudo usermod -a -G {instance_name} {self.username}", shell=True)
+
+    def delete(self):
+        print(f"Deleting user {self.username}")
+        subprocess.run(f"sudo deluser {self.username}", shell=True)
 
 
 class OdooInstance:
     def __init__(
             self,
-            instance_name: str,
             odoo_version: str,
-            create_datetime: datetime.datetime = datetime.datetime.now(),
             port: int = 8069,
             longpolling_port: int = 8072,
             friendly_name: str = None,
     ):
         self.name = friendly_name if friendly_name else instance_name
-        self.instance_name = instance_name
+        self.create_datetime = datetime.datetime.now()
+        self.instance_name = hashlib.md5(f"{args['v']}-{self.create_datetime}".encode()).hexdigest()
         self.odoo_version = odoo_version
-        self.create_datetime = create_datetime
         self.last_update_datetime = None
         self.port = port
         self.longpolling_port = longpolling_port
