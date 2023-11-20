@@ -114,7 +114,7 @@ if __name__ == "__main__":
     operation = sys.argv[1]
     if operation == "list":
         for instance_name in os.listdir("/opt/odoo"):
-            instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
+            instance_data = load_instance_data(f"{ROOT}{instance_name}")
             if instance_data:
                 print(instance_data)
     elif operation == "create":
@@ -140,7 +140,7 @@ if __name__ == "__main__":
         if 'i' not in args:
             print("Please provide an instance name")
             sys.exit(1)
-        instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
             print("Instance not found")
             sys.exit(1)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
             print("Please provide an instance name")
             sys.exit(1)
         print("Deleting instance...")
-        instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
             print("Instance not found")
             sys.exit(1)
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         if 'i' not in args or 'u' not in args:
             print("Please provide an instance name and a username")
             sys.exit(1)
-        instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
             print("Instance not found")
             sys.exit(1)
@@ -179,7 +179,7 @@ if __name__ == "__main__":
         if 'i' not in args:
             print("Please provide an instance name")
             sys.exit(1)
-        instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
             print("Instance not found")
             sys.exit(1)

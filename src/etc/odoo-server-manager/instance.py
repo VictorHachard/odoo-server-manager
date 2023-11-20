@@ -22,10 +22,9 @@ def check_if_port_is_available(port):
     Check if a port is available from all the odoo instances
     """
     for instance_name in os.listdir("/opt/odoo"):
-        if os.path.isdir(f"{ROOT}{instance_name}") and os.path.exists(f"{ROOT}{instance_name}/instance_data.pkl"):
-            instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
-            if int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
-                return False
+        instance_data = load_instance_data(f"{ROOT}{instance_name}")
+        if instance_data and int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
+            return False
     return True
 
 
@@ -382,7 +381,7 @@ server {{
     ############################
 
     def save(self):
-        with open(f"{ROOT}{self.instance_name}/instance_data.pkl", "wb") as f:
+        with open(f"{ROOT}{self.instance_name}", "wb") as f:
             pickle.dump(self, f)
 
     ############################
@@ -403,6 +402,9 @@ server {{
 
 
 def load_instance_data(file_path):
+    """
+    Load instance data from path. e.g. /opt/odoo/instance_name
+    """
     instance = None
     if os.path.isdir(f"{file_path}") and os.path.exists(f"{file_path}/instance_data.pkl"):
         with open(file_path, "rb") as f:
