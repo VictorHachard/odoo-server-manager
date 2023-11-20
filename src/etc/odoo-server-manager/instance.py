@@ -53,22 +53,21 @@ def check_port(port):
 
 
 class User:
-    def __init__(self, odoo_instance, username):
-        self.odoo_instance = odoo_instance
+    def __init__(
+            self,
+            username: str,
+    ):
         self.username = username
 
     def _generate_password(self):
         return "".join(random.choice('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') for i in range(16))
 
-    def create(self):
-        """
-        Create a user for the instance with password
-        """
+    def create(self, instance_name):
         new_password = self._generate_password()
         print(f"Creating user {self.username} with password {new_password}")
-        subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{self.odoo_instance.instance_name} {self.username}", shell=True)
+        subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{instance_name} {self.username}", shell=True)
         subprocess.run(f"echo '{new_password}' | sudo passwd --stdin {self.username}", shell=True)
-        subprocess.run(f"sudo usermod -a -G {self.odoo_instance.instance_name} {self.username}", shell=True)
+        subprocess.run(f"sudo usermod -a -G {instance_name} {self.username}", shell=True)
 
 
 class OdooInstance:
@@ -96,8 +95,8 @@ class OdooInstance:
             raise ValueError("Longpolling port is not free")
 
     def add_user(self, username):
-        user = User(self, username)
-        user.create()
+        user = User(username)
+        user.create(self.instance_name)
         self.user.append(user)
 
     ############################
