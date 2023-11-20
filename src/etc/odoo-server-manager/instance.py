@@ -171,6 +171,7 @@ class OdooInstance:
         subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}/logs", shell=True)
         subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}/backups", shell=True)
         subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}/custom_addons", shell=True)
+        subprocess.run(f"sudo chmod -R 775 {ROOT}{self.instance_name}/custom_addons", shell=True)
 
     def create_postgresql_user(self):
         subprocess.run(["sudo", "-u", "postgres", "createuser", "-d", "-r", "-s", self.instance_name])
@@ -199,8 +200,6 @@ logfile = {ROOT}{self.instance_name}/logs/odoo.log
 db_host = localhost
 db_port = 5432
 db_user = {self.instance_name}
-db_password = {self.instance_name}
-db_name = {self.instance_name}
 http_port = {self.port}
 longpolling_port = {self.longpolling_port}
 """)
@@ -381,7 +380,7 @@ server {{
     ############################
 
     def save(self):
-        with open(f"{ROOT}{self.instance_name}", "wb") as f:
+        with open(f"{ROOT}{self.instance_name}/instance_data.pkl", "wb") as f:
             pickle.dump(self, f)
 
     ############################
@@ -407,7 +406,7 @@ def load_instance_data(file_path):
     """
     instance = None
     if os.path.isdir(f"{file_path}") and os.path.exists(f"{file_path}/instance_data.pkl"):
-        with open(file_path, "rb") as f:
+        with open(file_path + "/instance_data.pkl", "rb") as f:
             instance = pickle.load(f)
     return instance
 
