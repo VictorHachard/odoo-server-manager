@@ -117,7 +117,7 @@ if journal:
     if operation == "help":
         print(man)
     elif operation == "list":
-        details = '-d' in args
+        details = 'd' in args
         for instance_name in os.listdir("/opt/odoo"):
             instance_data = load_instance_data(f"{ROOT}{instance_name}")
             if instance_data and details:

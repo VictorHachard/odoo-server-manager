@@ -84,7 +84,7 @@ class OdooInstance:
     ):
         self.create_datetime = datetime.datetime.now()
         self.instance_name = hashlib.md5(f"{odoo_version}-{self.create_datetime}".encode()).hexdigest()
-        self.name = friendly_name if friendly_name else instance_name
+        self.name = friendly_name if friendly_name else self.instance_name
         self.odoo_version = odoo_version
         self.last_update_datetime = None
         self.port = port
@@ -391,15 +391,17 @@ server {{
         return f"{self.instance_name} - {self.odoo_version} - {'Running' if self.is_running() else 'Stopped'}"
 
     def print_details(self):
-        print(f"Instance {self.instance_name} ({self.is_running()}) details:")
-        print(f"    Name                 : {self.name}")
+        print(f"{self.instance_name} ({'Running' if self.is_running() else 'Stopped'}):")
+        if self.name:
+            print(f"    Name                 : {self.name}")
         print(f"    Instance name        : {self.instance_name}")
         print(f"    Odoo version         : {self.odoo_version}")
         print(f"    Port                 : {self.port}")
         print(f"    Longpolling port     : {self.longpolling_port}")
         print(f"    Create datetime      : {self.create_datetime}")
         print(f"    Last update datetime : {self.last_update_datetime}")
-        print(f"    Users                : {', '.join([user.username for user in self.user])}")
+        if self.user:
+            print(f"    Users                : {', '.join([user.username for user in self.user])}")
 
 
 def load_instance_data(file_path):
