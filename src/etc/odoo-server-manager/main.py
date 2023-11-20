@@ -116,8 +116,8 @@ if __name__ == "__main__":
     operation = sys.argv[1]
     if operation == "list":
         for instance_name in os.listdir("/opt/odoo"):
-            if os.path.isdir(f"{ROOT}{instance_name}") and os.path.exists(f"{ROOT}{instance_name}/instance_data.pkl"):
-                instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
+            instance_data = load_instance_data(f"{ROOT}{instance_name}/instance_data.pkl")
+            if instance_data:
                 print(instance_data)
     elif operation == "create":
         if 'v' not in args or 'p' not in args or 'l' not in args:
@@ -147,6 +147,9 @@ if __name__ == "__main__":
             print("Please provide an instance name")
             sys.exit(1)
         instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        if not instance:
+            print("Instance not found")
+            sys.exit(1)
         instance.update_odoo_code()
         instance.restart()
     elif operation == "delete":
@@ -167,6 +170,9 @@ if __name__ == "__main__":
             print("Please provide an instance name and a username")
             sys.exit(1)
         instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        if not instance:
+            print("Instance not found")
+            sys.exit(1)
         instance.add_user(args['u'])
         instance.save()
     elif operation == "journal":
@@ -174,4 +180,7 @@ if __name__ == "__main__":
             print("Please provide an instance name")
             sys.exit(1)
         instance = load_instance_data(f"{ROOT}{args['i']}/instance_data.pkl")
+        if not instance:
+            print("Instance not found")
+            sys.exit(1)
         instance.print_journal()

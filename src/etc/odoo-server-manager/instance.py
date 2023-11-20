@@ -400,7 +400,9 @@ server {{
 
 
 def load_instance_data(file_path):
-    with open(file_path, "rb") as f:
-        instance = pickle.load(f)
+    instance = None
+    if os.path.isdir(f"{file_path}") and os.path.exists(f"{file_path}/instance_data.pkl"):
+        with open(file_path, "rb") as f:
+            instance = pickle.load(f)
     return instance
 
