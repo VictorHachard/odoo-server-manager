@@ -84,7 +84,7 @@ class OdooInstance:
     ):
         self.create_datetime = datetime.datetime.now()
         self.instance_name = hashlib.md5(f"{odoo_version}-{self.create_datetime}".encode()).hexdigest()
-        self.name = friendly_name if friendly_name else self.instance_name
+        self.name = friendly_name
         self.odoo_version = odoo_version
         self.last_update_datetime = None
         self.port = port
