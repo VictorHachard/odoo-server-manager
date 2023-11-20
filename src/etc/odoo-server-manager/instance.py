@@ -71,7 +71,7 @@ class User:
 
     def delete(self):
         print(f"Deleting user {self.username}")
-        subprocess.run(f"sudo deluser {self.username}", shell=True)
+        subprocess.run(f"sudo userdel {self.username}", shell=True)
 
 
 class OdooInstance:
@@ -82,9 +82,9 @@ class OdooInstance:
             longpolling_port: int = 8072,
             friendly_name: str = None,
     ):
-        self.name = friendly_name if friendly_name else instance_name
         self.create_datetime = datetime.datetime.now()
-        self.instance_name = hashlib.md5(f"{args['v']}-{self.create_datetime}".encode()).hexdigest()
+        self.instance_name = hashlib.md5(f"{odoo_version}-{self.create_datetime}".encode()).hexdigest()
+        self.name = friendly_name if friendly_name else instance_name
         self.odoo_version = odoo_version
         self.last_update_datetime = None
         self.port = port
@@ -391,13 +391,15 @@ server {{
         return f"{self.instance_name} - {self.odoo_version} - {'Running' if self.is_running() else 'Stopped'}"
 
     def print_details(self):
-        print(f"Instance {self.instance_name} details")
-        print(f"    Name: {self.name}")
-        print(f"    Instance name: {self.instance_name}")
-        print(f"    Odoo version: {self.odoo_version}")
-        print(f"    Port: {self.port}")
-        print(f"    Longpolling port: {self.longpolling_port}")
-        print(f"    Create datetime: {self.create_datetime}")
+        print(f"Instance {self.instance_name} ({self.is_running()}) details:")
+        print(f"    Name                 : {self.name}")
+        print(f"    Instance name        : {self.instance_name}")
+        print(f"    Odoo version         : {self.odoo_version}")
+        print(f"    Port                 : {self.port}")
+        print(f"    Longpolling port     : {self.longpolling_port}")
+        print(f"    Create datetime      : {self.create_datetime}")
+        print(f"    Last update datetime : {self.last_update_datetime}")
+        print(f"    Users                : {', '.join([user.username for user in self.user])}")
 
 
 def load_instance_data(file_path):

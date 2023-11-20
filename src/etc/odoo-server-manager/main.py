@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import subprocess
+import platform
 
 from instance import OdooInstance, load_instance_data
 from __init__ import ROOT
@@ -81,41 +82,47 @@ def check_args(args):
         print("Please provide a value for each argument")
         sys.exit(1)
     for i in range(0, len(args), 2):
-        if args[i].replace('-', '') not in ['v', 'n', 'p', 'l', 'i', 'u']:
+        if args[i].replace('-', '') not in ['v', 'n', 'p', 'l', 'i', 'u', 'd']:
             print(f"Unknown argument: {args[i]}")
             sys.exit(1)
 
 
 if __name__ == "__main__":
-    """
-    First argument is the operation (list, create, delete, add_user, journal)
-    if create:
-        -v odoo_version (x.x) (required) (example: 16.0)
-        -n friendly_name (optional) (example: "odoo-16")
-        -p port (required) (example: 8069)
-        -l longpolling_port (required) (example: 8072)
-    if update:
-        -i instance_name (required)
-    if delete:
-        -n instance_name (required)
-    if add_user: 
-        -i instance_name (required)
-        -u username (required) (example: admin)
-    if journal:
-        -i instance_name (required)
-    """
+    man = """First argument is the operation (list, create, delete, add_user, journal, help)
+if list:
+    -d (optional)
+if create:
+    -v odoo_version (x.x) (required) (example: 16.0)
+    -p port (required) (example: 8069)
+    -l longpolling_port (required) (example: 8072)
+    -n friendly_name (optional) (example: "odoo-16")
+if update:
+    -i instance_name (required)
+if delete:
+    -n instance_name (required)
+if add_user: 
+    -i instance_name (required)
+    -u username (required) (example: admin)
+if journal:
+    -i instance_name (required)
+"""
     if not os.path.exists("/opt/odoo"):
         subprocess.run(["sudo", "mkdir", "/opt/odoo"])
     if len(sys.argv) < 2:
-        print("Please provide an operation (list, create, delete, add_user)")
+        print("Please provide an operation (list, create, delete, add_user, journal, help)")
         sys.exit(1)
     check_args(sys.argv[2:])
     args = parse_args(sys.argv[2:])
     operation = sys.argv[1]
-    if operation == "list":
+    if operation == "help":
+        print(man)
+    elif operation == "list":
+        details = '-d' in args
         for instance_name in os.listdir("/opt/odoo"):
             instance_data = load_instance_data(f"{ROOT}{instance_name}")
-            if instance_data:
+            if instance_data and details:
+                instance_data.print_details()
+            elif instance_data:
                 print(instance_data)
     elif operation == "create":
         if 'v' not in args or 'p' not in args or 'l' not in args:
@@ -185,5 +192,5 @@ if __name__ == "__main__":
             sys.exit(1)
         instance.print_journal()
     else:
-        print("Unknown operation, please provide a valid operation (list, create, delete, add_user)")
+        print("Unknown operation, please provide a valid operation (list, create, delete, add_user, journal, help)")
         sys.exit(1)
