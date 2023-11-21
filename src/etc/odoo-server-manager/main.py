@@ -82,7 +82,7 @@ def check_args(args):
         print("Please provide a value for each argument")
         sys.exit(1)
     for i in range(0, len(args), 2):
-        if args[i].replace('-', '') not in ['v', 'n', 'p', 'l', 'i', 'u', 'd']:
+        if args[i].replace('-', '') not in ['v', 'n', 'p', 'l', 'i', 'u', 'd', 's']:
             print(f"Unknown argument: {args[i]}")
             sys.exit(1)
 
@@ -97,6 +97,7 @@ if create:
     -p port (required) (example: 8069)
     -l longpolling_port (required) (example: 8072)
     -n friendly_name (optional) (example: "odoo-16")
+    -s server_name (optional) (example: "odoo-16.example.com")
 if update:
     -i instance_name (required)
 if add_dependency:
@@ -132,8 +133,8 @@ if journal:
         if 'v' not in args or 'p' not in args or 'l' not in args:
             print("Please provide an odoo_version, a port and a longpolling_port")
             sys.exit(1)
-        if args['v'] not in ["16.0", "17.0"]:
-            print("Please provide a valid odoo_version (16.0, 17.0)")
+        if args['v'] not in ["15.0", "16.0", "17.0"]:
+            print("Please provide a valid odoo_version (15.0, 16.0, 17.0)")
             sys.exit(1)
         _install_odoo_dependencies()
         _install_wkhtmltopdf()
@@ -141,12 +142,9 @@ if journal:
             friendly_name=args['n'] if 'n' in args else '',
             odoo_version=args['v'],
             port=int(args['p']),
-            longpolling_port=int(args['l'])
+            longpolling_port=int(args['l']),
+            server_name=args['s'] if 's' in args else '',
         )
-        instance.create()
-        instance.update_odoo_code()
-        instance.save()
-        instance.restart()
     elif operation == "update":
         if 'i' not in args:
             print("Please provide an instance name")
@@ -165,6 +163,7 @@ if journal:
         if not instance:
             print("Instance not found")
             sys.exit(1)
+        instance.add_dependency(args['d'])
         instance.restart()
     elif operation == "delete":
         if 'i' not in args:

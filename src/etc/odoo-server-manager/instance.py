@@ -98,6 +98,7 @@ class OdooInstance:
             port: int = 8069,
             longpolling_port: int = 8072,
             friendly_name: str = None,
+            server_name: str = None,
     ):
         self.create_datetime = datetime.datetime.now()
         self.instance_name = hashlib.md5(f"{odoo_version}-{self.create_datetime}".encode()).hexdigest()
@@ -106,6 +107,7 @@ class OdooInstance:
         self.last_update_datetime = None
         self.port = port
         self.longpolling_port = longpolling_port
+        self.server_name = server_name
         self.user = []
         self.dependencies = []
         # Check if port is free
@@ -115,6 +117,10 @@ class OdooInstance:
             raise ValueError("Longpolling port is not free")
         if not check_if_firewall_is_enabled():
             raise ValueError("Firewall is not enabled. Please add port to firewall if needed.")
+        self._create()
+        self.update_odoo_code()
+        self.save()
+        self.restart()
 
     def add_user(self, username):
         user = User(username)
@@ -161,7 +167,7 @@ class OdooInstance:
 
     def update_requirements(self):
         if not self._venv_exists():
-            self.create_venv()
+            self._create_venv()
         if os.path.exists(f"{ROOT}{self.instance_name}/src/requirements.txt"):
             subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install wheel && pip3 install -r {ROOT}{self.instance_name}/src/requirements.txt && deactivate\"", shell=True)
             for dependency in self.dependencies:
@@ -177,21 +183,21 @@ class OdooInstance:
     ############################
 
     def create(self):
-        self.create_user()
-        self.create_folder_structure()
-        self.create_postgresql_user()
-        self.create_venv()
-        self.create_odoo_config()
-        self.create_service_config()
-        self.create_ngnix_config()
+        self._create_user()
+        self._create_folder_structure()
+        self._create_postgresql_user()
+        self._create_venv()
+        self._create_odoo_config()
+        self._create_service_config()
+        self._create_ngnix_config()
 
-    def create_user(self):
+    def _create_user(self):
         print("Creating user")
         subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{self.instance_name} {self.instance_name}",
                        shell=True)
         subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}", shell=True)
 
-    def create_folder_structure(self):
+    def _create_folder_structure(self):
         if not os.path.exists(f"{ROOT}{self.instance_name}"):
             subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}", shell=True)
         subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}/src", shell=True)
@@ -200,13 +206,13 @@ class OdooInstance:
         subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}/custom_addons", shell=True)
         subprocess.run(f"sudo chmod -R 775 {ROOT}{self.instance_name}/custom_addons", shell=True)
 
-    def create_postgresql_user(self):
+    def _create_postgresql_user(self):
         subprocess.run(["sudo", "-u", "postgres", "createuser", "-d", "-r", "-s", self.instance_name])
         line = "/# Database administrative login by Unix domain socket/i host    all    " + self.instance_name + "    127.0.0.1/32    trust"
         subprocess.run(["sudo", "sed", "-i", line, "/etc/postgresql/14/main/pg_hba.conf"])
         self.restart_postgresql()
 
-    def create_venv(self):
+    def _create_venv(self):
         print("Creating venv")
         self.chown()
         if self._venv_exists():
@@ -214,7 +220,7 @@ class OdooInstance:
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/venv", shell=True)
         subprocess.run(f"sudo -u {self.instance_name} bash -c \"python3 -m venv {ROOT}{self.instance_name}/venv\"", shell=True)
 
-    def create_odoo_config(self):
+    def _create_odoo_config(self):
         print("Creating odoo config")
         if os.path.exists(f"{ROOT}{self.instance_name}/odoo.conf"):
             print("Removing old odoo config")
@@ -232,7 +238,7 @@ longpolling_port = {self.longpolling_port}
 proxy_mode = True
 """)
 
-    def create_service_config(self):
+    def _create_service_config(self):
         print("Creating service config")
         if os.path.exists(f"/etc/systemd/system/{self.instance_name}.service"):
             print("Removing old service config")
@@ -258,7 +264,7 @@ WantedBy=multi-user.target
         print("Creating service symbolic link")
         self.enable()
 
-    def create_ngnix_config(self):
+    def _create_ngnix_config(self):
         print("Creating nginx config")
         if os.path.exists(f"/etc/nginx/sites-enabled/{self.instance_name}"):
             print("Removing old nginx config (enabled)")
@@ -266,12 +272,12 @@ WantedBy=multi-user.target
         if os.path.exists(f"/etc/nginx/sites-available/{self.instance_name}"):
             print("Removing old nginx config (available)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
-
+        server_name = f"{self.server_name};" if self.server_name else f"{self.instance_name}.example.com;"
         with open(f"/etc/nginx/sites-available/{self.instance_name}", "w") as f:
             f.write(f"""#server {{
 #  listen 80;
 #  listen [::]:80;
-#  server_name {self.instance_name}.example.com;
+#  server_name {server_name};
 #  return 301 https://\$host\$request_uri;
 #}}
 
@@ -281,7 +287,7 @@ server {{
     #listen [::]:443 ssl http2;
     #ssl_certificate ;
     #ssl_certificate_key ;
-    server_name {self.instance_name}.example.com;
+    server_name {server_name};
 
     root /var/www/html;
 
