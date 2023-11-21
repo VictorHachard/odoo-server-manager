@@ -57,7 +57,7 @@ def _install_wkhtmltopdf():
         return
     system_architecture = platform.machine()
 
-    if "arm" in system_architecture:
+    if "arm" in system_architecture.lower():
         package_url = "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_arm64.deb"
     else:
         package_url = "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb"
@@ -88,7 +88,8 @@ def check_args(args):
 
 
 if __name__ == "__main__":
-    man = """First argument is the operation (list, create, delete, add_user, journal, help)
+    error = "Please provide an operation (list, create, update, add_dependency, delete, add_user, journal, help)"
+    man = """First argument is the operation (list, create, update, add_dependency, delete, add_user, journal, help)
 if list:
     -d (optional)
 if create:
@@ -98,6 +99,9 @@ if create:
     -n friendly_name (optional) (example: "odoo-16")
 if update:
     -i instance_name (required)
+if add_dependency:
+    -i instance_name (required)
+    -d dependency_name (required) (example: "Babel")
 if delete:
     -n instance_name (required)
 if add_user: 
@@ -109,7 +113,7 @@ if journal:
     if not os.path.exists("/opt/odoo"):
         subprocess.run(["sudo", "mkdir", "/opt/odoo"])
     if len(sys.argv) < 2:
-        print("Please provide an operation (list, create, delete, add_user, journal, help)")
+        print(error)
         sys.exit(1)
     check_args(sys.argv[2:])
     args = parse_args(sys.argv[2:])
@@ -153,6 +157,17 @@ if journal:
             sys.exit(1)
         instance.update_odoo_code()
         instance.restart()
+    elif operation == "add_dependency":
+        if 'i' not in args:
+            print("Please provide an instance name")
+            sys.exit(1)
+        instance = load_instance_data(f"{ROOT}{args['i']}")
+        if not instance:
+            print("Instance not found")
+            sys.exit(1)
+        instance.update_requirements()
+        instance.update_custom_requirements()
+        instance.restart()
     elif operation == "delete":
         if 'i' not in args:
             print("Please provide an instance name")
@@ -192,5 +207,5 @@ if journal:
             sys.exit(1)
         instance.print_journal()
     else:
-        print("Unknown operation, please provide a valid operation (list, create, delete, add_user, journal, help)")
+        print("Unknown operation." + error)
         sys.exit(1)

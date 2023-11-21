@@ -9,6 +9,13 @@ import datetime
 from __init__ import ROOT
 
 
+def check_if_firewall_is_enabled():
+    """
+    Check if the firewall is enabled
+    """
+    return subprocess.run(["sudo", "ufw", "status"], stdout=subprocess.PIPE).returncode == 0
+
+
 def check_if_port_is_free(port):
     """
     Check if a port is free
@@ -59,13 +66,23 @@ class User:
     ):
         self.username = username
 
-    def _generate_password(self):
+    def _generate_password(self) -> str:
         return "".join(random.choice('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') for i in range(16))
+
+    def _check_ssh_password_auth(self) -> bool:
+        """ Check if ssh password authentication is enabled """
+        with open("/etc/ssh/sshd_config") as f:
+            for line in f.readlines():
+                if line.startswith("PasswordAuthentication"):
+                    return line.split(" ")[1].strip() == "yes"
+        return False
 
     def create(self, instance_name):
         new_password = self._generate_password()
-        print(f"Creating user {self.username} with password {new_password}")
         subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{instance_name} {self.username}", shell=True)
+        print(f"Creating user {self.username} with password {new_password}")
+        if not self._check_ssh_password_auth():
+            print("Password authentication is not enabled for ssh. Please enable it to be able to connect to the instance via ssh.")
         subprocess.run(f"echo {self.username}:{new_password} | sudo chpasswd", shell=True)
         subprocess.run(f"sudo usermod -a -G {instance_name} {self.username}", shell=True)
 
@@ -90,11 +107,14 @@ class OdooInstance:
         self.port = port
         self.longpolling_port = longpolling_port
         self.user = []
+        self.dependencies = []
         # Check if port is free
         if not check_port(self.port):
             raise ValueError("Port is not free")
         if not check_port(self.longpolling_port):
             raise ValueError("Longpolling port is not free")
+        if not check_if_firewall_is_enabled():
+            raise ValueError("Firewall is not enabled. Please add port to firewall if needed.")
 
     def add_user(self, username):
         user = User(username)
@@ -144,6 +164,15 @@ class OdooInstance:
             self.create_venv()
         if os.path.exists(f"{ROOT}{self.instance_name}/src/requirements.txt"):
             subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install wheel && pip3 install -r {ROOT}{self.instance_name}/src/requirements.txt && deactivate\"", shell=True)
+            if self.dependencies:
+                for dependency in self.dependencies:
+                    subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install {dependency} && deactivate\"", shell=True)
+
+    def add_dependency(self, dependency):
+        if not self._venv_exists():
+            self.create_venv()
+        self.dependencies.append(dependency)
+        subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install {dependency} && deactivate\"", shell=True)
 
     ############################
     # Create methods
@@ -202,6 +231,7 @@ db_port = 5432
 db_user = {self.instance_name}
 http_port = {self.port}
 longpolling_port = {self.longpolling_port}
+proxy_mode = True
 """)
 
     def create_service_config(self):
@@ -222,7 +252,7 @@ PermissionsStartOnly=true
 ExecStart={ROOT}{self.instance_name}/venv/bin/python {ROOT}{self.instance_name}/src/odoo-bin -c {ROOT}{self.instance_name}/odoo.conf
 User={self.instance_name}
 Group={self.instance_name}
-Restart=always
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
@@ -243,7 +273,7 @@ WantedBy=multi-user.target
             f.write(f"""#server {{
 #  listen 80;
 #  listen [::]:80;
-#  server_name $WEBSITE_NAME;
+#  server_name {self.instance_name}.example.com;
 #  return 301 https://\$host\$request_uri;
 #}}
 
@@ -268,6 +298,28 @@ server {{
 
     access_log /var/log/nginx/{self.instance_name}.access.log;
     error_log /var/log/nginx/{self.instance_name}.error.log;
+    
+    proxy_buffers 16 64k;
+    proxy_buffer_size 128k;
+    proxy_read_timeout 900s;
+    proxy_connect_timeout 900s;
+    proxy_send_timeout 900s;
+    
+    proxy_next_upstream error timeout invalid_header http_500 http_502
+    http_503;
+    
+    types {{
+        text/less less;
+        text/scss scss;
+    }}
+    
+    gzip on;
+    gzip_min_length 1100;
+    gzip_buffers 4 32k;
+    gzip_types text/css text/less text/plain text/xml application/xml application/json application/javascript application/pdf image/jpeg image/png;
+    gzip_vary on;
+    client_header_buffer_size 4k;
+    large_client_header_buffers 4 64k;
 
     location / {{
         proxy_pass http://localhost:{self.port};
@@ -292,7 +344,7 @@ server {{
         proxy_pass http://localhost:{self.port};
         add_header Cache-Control "public, no-transform";
     }}
-""")
+}}""")
         self.enable_site()
         self.reload_nginx()
 
@@ -400,6 +452,8 @@ server {{
         print(f"    Longpolling port     : {self.longpolling_port}")
         print(f"    Create datetime      : {self.create_datetime}")
         print(f"    Last update datetime : {self.last_update_datetime}")
+        if self.dependencies:
+            print(f"    Dependencies         : {', '.join(self.dependencies)}")
         if self.user:
             print(f"    Users                : {', '.join([user.username for user in self.user])}")
 
