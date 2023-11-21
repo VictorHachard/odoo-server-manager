@@ -165,8 +165,6 @@ if journal:
         if not instance:
             print("Instance not found")
             sys.exit(1)
-        instance.update_requirements()
-        instance.update_custom_requirements()
         instance.restart()
     elif operation == "delete":
         if 'i' not in args:

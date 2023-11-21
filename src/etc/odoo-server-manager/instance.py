@@ -164,15 +164,13 @@ class OdooInstance:
             self.create_venv()
         if os.path.exists(f"{ROOT}{self.instance_name}/src/requirements.txt"):
             subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install wheel && pip3 install -r {ROOT}{self.instance_name}/src/requirements.txt && deactivate\"", shell=True)
-            if self.dependencies:
-                for dependency in self.dependencies:
-                    subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install {dependency} && deactivate\"", shell=True)
+            for dependency in self.dependencies:
+                subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install {dependency} && deactivate\"", shell=True)
 
     def add_dependency(self, dependency):
-        if not self._venv_exists():
-            self.create_venv()
-        self.dependencies.append(dependency)
-        subprocess.run(f"sudo -u {self.instance_name} bash -c \"source {ROOT}{self.instance_name}/venv/bin/activate && pip3 install --upgrade pip && pip3 install {dependency} && deactivate\"", shell=True)
+        if dependency not in self.dependencies:
+            self.dependencies.append(dependency)
+            self.update_requirements()
 
     ############################
     # Create methods
