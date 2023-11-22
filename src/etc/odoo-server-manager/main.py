@@ -1,13 +1,11 @@
 import sys
 import os
-import re
 import subprocess
 import platform
 
-from instance import OdooInstance, load_instance_data
-from __init__ import ROOT
+from src.instance import load_instance_data, OdooInstance
 
-
+ROOT = '/opt/odoo/'
 PYTHON_DEPENDENCIES = [
     "build-essential",
     "python3.10",

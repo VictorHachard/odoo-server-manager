@@ -6,7 +6,7 @@ import socket
 import hashlib
 import datetime
 
-from __init__ import ROOT
+ROOT = '/opt/odoo/'
 
 
 def check_if_firewall_is_enabled():
@@ -242,7 +242,7 @@ proxy_mode = True
         print("Creating service config")
         if os.path.exists(f"/etc/systemd/system/{self.instance_name}.service"):
             print("Removing old service config")
-            subprocess.run(f"sudo rm -rf /etc/systemd/system/{instance_name}.service", shell=True)
+            subprocess.run(f"sudo rm -rf /etc/systemd/system/{self.instance_name}.service", shell=True)
         with open(f"/etc/systemd/system/{self.instance_name}.service", "w") as f:
             f.write(f"""[Unit]
 Description=Odoo Instance {self.instance_name}
