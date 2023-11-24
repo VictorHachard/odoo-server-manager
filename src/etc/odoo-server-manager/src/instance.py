@@ -2,26 +2,13 @@ import os
 import pickle
 import subprocess
 import random
-import socket
 import hashlib
 import datetime
 
+from src.user import User
+from src.utils import check_if_port_is_free, check_if_port_is_valid, check_if_firewall_is_enabled, get_postgres_version
+
 ROOT = '/opt/odoo/'
-
-
-def check_if_firewall_is_enabled():
-    """
-    Check if the firewall is enabled
-    """
-    return subprocess.run(["sudo", "ufw", "status"], stdout=subprocess.PIPE).returncode == 0
-
-
-def check_if_port_is_free(port):
-    """
-    Check if a port is free
-    """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', int(port))) != 0
 
 
 def check_if_port_is_available(port):
@@ -33,13 +20,6 @@ def check_if_port_is_available(port):
         if instance_data and int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
             return False
     return True
-
-
-def check_if_port_is_valid(port):
-    """
-    Check if a port is valid
-    """
-    return 1024 < int(port) < 65535
 
 
 def check_port(port):
@@ -59,39 +39,7 @@ def check_port(port):
     return False
 
 
-class User:
-    def __init__(
-            self,
-            username: str,
-    ):
-        self.username = username
-
-    def _generate_password(self) -> str:
-        return "".join(random.choice('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') for i in range(16))
-
-    def _check_ssh_password_auth(self) -> bool:
-        """ Check if ssh password authentication is enabled """
-        with open("/etc/ssh/sshd_config") as f:
-            for line in f.readlines():
-                if line.startswith("PasswordAuthentication"):
-                    return line.split(" ")[1].strip() == "yes"
-        return False
-
-    def create(self, instance_name):
-        new_password = self._generate_password()
-        subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{instance_name} {self.username}", shell=True)
-        print(f"Creating user {self.username} with password {new_password}")
-        if not self._check_ssh_password_auth():
-            print("Password authentication is not enabled for ssh. Please enable it to be able to connect to the instance via ssh.")
-        subprocess.run(f"echo {self.username}:{new_password} | sudo chpasswd", shell=True)
-        subprocess.run(f"sudo usermod -a -G {instance_name} {self.username}", shell=True)
-
-    def delete(self):
-        print(f"Deleting user {self.username}")
-        subprocess.run(f"sudo userdel {self.username}", shell=True)
-
-
-class OdooInstance:
+class Instance:
     def __init__(
             self,
             odoo_version: str,
@@ -115,8 +63,8 @@ class OdooInstance:
             raise ValueError("Port is not free")
         if not check_port(self.longpolling_port):
             raise ValueError("Longpolling port is not free")
-        if not check_if_firewall_is_enabled():
-            raise ValueError("Firewall is not enabled. Please add port to firewall if needed.")
+        if check_if_firewall_is_enabled():
+            print("Firewall is enabled. Please add port to firewall if needed.")
         self._create()
         self.update_odoo_code()
         self.save()
@@ -182,7 +130,7 @@ class OdooInstance:
     # Create methods
     ############################
 
-    def create(self):
+    def _create(self):
         self._create_user()
         self._create_folder_structure()
         self._create_postgresql_user()
@@ -207,9 +155,10 @@ class OdooInstance:
         subprocess.run(f"sudo chmod -R 775 {ROOT}{self.instance_name}/custom_addons", shell=True)
 
     def _create_postgresql_user(self):
+        version = get_postgres_version()
         subprocess.run(["sudo", "-u", "postgres", "createuser", "-d", "-r", "-s", self.instance_name])
         line = "/# Database administrative login by Unix domain socket/i host    all    " + self.instance_name + "    127.0.0.1/32    trust"
-        subprocess.run(["sudo", "sed", "-i", line, "/etc/postgresql/14/main/pg_hba.conf"])
+        subprocess.run(["sudo", "sed", "-i", line, f"/etc/postgresql/{version}/main/pg_hba.conf"])
         self.restart_postgresql()
 
     def _create_venv(self):
@@ -357,12 +306,13 @@ server {{
     ############################
 
     def delete(self):
+        version = get_postgres_version()
         command = f"sudo -u postgres psql -c 'DROP DATABASE IF EXISTS (SELECT datname FROM pg_database WHERE datdba = (SELECT usesysid FROM pg_user WHERE usename = \'{self.instance_name}\'));'"
         subprocess.run(command, shell=True)
         subprocess.run(f"sudo -u postgres dropuser {self.instance_name}", shell=True)
 
         line = "/host    all    " + self.instance_name + "    127.0.0.1/32    trust/d"
-        subprocess.run(["sudo", "sed", "-i", line, "/etc/postgresql/14/main/pg_hba.conf"])
+        subprocess.run(["sudo", "sed", "-i", line, f"/etc/postgresql/{version}/main/pg_hba.conf"])
 
         self.disable()
         subprocess.run(f"sudo rm -rf /etc/systemd/system/{self.instance_name}.service", shell=True)

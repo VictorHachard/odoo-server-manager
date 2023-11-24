@@ -2,8 +2,9 @@ import sys
 import os
 import subprocess
 import platform
+from typing import Dict, re, Union
 
-from src.instance import load_instance_data, OdooInstance
+from src.instance import load_instance_data, Instance
 
 ROOT = '/opt/odoo/'
 PYTHON_DEPENDENCIES = [
@@ -29,6 +30,67 @@ PYTHON_DEPENDENCIES = [
     "libblas-dev",
     "libatlas-base-dev",
 ]
+
+
+def find_args(
+        input_string: str,
+        rules: Dict[str, Dict[str, Union[str, bool]]],
+) -> Dict[str, str]:
+    """
+    Finds arguments in a string based on a dictionary of rules.
+
+    Args:
+        input_string (str): The string to search.
+        rules (dict): A dictionary where keys are argument names and values are dictionaries containing rules for the argument.
+
+    Returns:
+        dict: A dictionary containing the arguments and their values.
+
+    Example:
+        >>> find_args('--arg value', {'arg': {'prefix': '--', 'value': True 'required': True, 'type': 'str'}})
+        {'arg': 'value'}
+        >>> find_args('--arg', {'arg': {'prefix': '--', 'value': False}})
+        {'arg': True}
+        >>> find_args('--arg1 value1 --arg2 value2', {'arg1': {'prefix': '--', 'value': True, 'required': True, 'type': 'str'}, 'arg2': {'prefix': '--', 'value': True, 'required': True, 'type': 'str'}})
+        {'arg1': 'value1', 'arg2': 'value2'}
+
+    Raises:
+        ValueError: If a required argument is not found.
+    """
+    args = {}
+    errors = []
+
+    for arg_name, arg_rules in rules.items():
+        prefix = arg_rules.get('prefix', '-')
+        value = arg_rules.get('value', False)
+        required = arg_rules.get('required', False)
+        type_ = arg_rules.get('type', 'str')
+
+        if value:
+            pattern = f'{prefix}{arg_name}\\s+([^\\s]+)'
+        else:
+            pattern = f'{prefix}{arg_name}'
+
+        match = re.search(pattern, input_string, re.IGNORECASE)
+        if match:
+            if value:
+                arg_value = match.group(1)
+                if type_ == 'int':
+                    arg_value = int(arg_value)
+                elif type_ == 'float':
+                    arg_value = float(arg_value)
+                elif type_ == 'bool':
+                    arg_value = arg_value.lower() == 'true'
+                args[arg_name] = arg_value
+            else:
+                args[arg_name] = True
+        elif required:
+            errors.append(f'Argument "{arg_name}" is required.')
+
+    if errors:
+        raise ValueError('\n'.join(errors))
+
+    return args
 
 
 def _install_odoo_dependencies():
@@ -65,26 +127,6 @@ def _install_wkhtmltopdf():
     subprocess.run(["sudo", "rm", package_url.split("/")[-1]])
 
 
-def parse_args(args):
-    """
-    Parse the arguments and return them as a dictionary
-    """
-    return {(args[i]).replace('-', ''): args[i + 1] for i in range(0, len(args), 2)}
-
-
-def check_args(args):
-    """
-    Check if the arguments are valid
-    """
-    if len(args) % 2 != 0:
-        print("Please provide a value for each argument")
-        sys.exit(1)
-    for i in range(0, len(args), 2):
-        if args[i].replace('-', '') not in ['v', 'n', 'p', 'l', 'i', 'u', 'd', 's']:
-            print(f"Unknown argument: {args[i]}")
-            sys.exit(1)
-
-
 if __name__ == "__main__":
     error = "Please provide an operation (list, create, update, add_dependency, delete, add_user, journal, help)"
     man = """First argument is the operation (list, create, update, add_dependency, delete, add_user, journal, help)
@@ -114,12 +156,11 @@ if journal:
     if len(sys.argv) < 2:
         print(error)
         sys.exit(1)
-    check_args(sys.argv[2:])
-    args = parse_args(sys.argv[2:])
     operation = sys.argv[1]
     if operation == "help":
         print(man)
     elif operation == "list":
+        args = find_args(" ".join(sys.argv[2:]), {'d': {'value': False}})
         details = 'd' in args
         for instance_name in os.listdir("/opt/odoo"):
             instance_data = load_instance_data(f"{ROOT}{instance_name}")
@@ -128,6 +169,13 @@ if journal:
             elif instance_data:
                 print(instance_data)
     elif operation == "create":
+        args = find_args(" ".join(sys.argv[2:]), {
+            'v': {'value': True, 'required': True, 'type': 'str'},
+            'p': {'value': True, 'required': True, 'type': 'int'},
+            'l': {'value': True, 'required': True, 'type': 'int'},
+            'n': {'value': True, 'required': False, 'type': 'str'},
+            's': {'value': True, 'required': False, 'type': 'str'},
+        })
         if 'v' not in args or 'p' not in args or 'l' not in args:
             print("Please provide an odoo_version, a port and a longpolling_port")
             sys.exit(1)
@@ -136,7 +184,7 @@ if journal:
             sys.exit(1)
         _install_odoo_dependencies()
         _install_wkhtmltopdf()
-        instance = OdooInstance(
+        instance = Instance(
             friendly_name=args['n'] if 'n' in args else '',
             odoo_version=args['v'],
             port=int(args['p']),
@@ -144,9 +192,7 @@ if journal:
             server_name=args['s'] if 's' in args else '',
         )
     elif operation == "update":
-        if 'i' not in args:
-            print("Please provide an instance name")
-            sys.exit(1)
+        args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
         instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
             print("Instance not found")
@@ -154,9 +200,10 @@ if journal:
         instance.update_odoo_code()
         instance.restart()
     elif operation == "add_dependency":
-        if 'i' not in args:
-            print("Please provide an instance name")
-            sys.exit(1)
+        args = find_args(" ".join(sys.argv[2:]), {
+            'i': {'value': True, 'required': True, 'type': 'str'},
+            'd': {'value': True, 'required': True, 'type': 'str'},
+        })
         instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
             print("Instance not found")
@@ -164,9 +211,7 @@ if journal:
         instance.add_dependency(args['d'])
         instance.restart()
     elif operation == "delete":
-        if 'i' not in args:
-            print("Please provide an instance name")
-            sys.exit(1)
+        args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
         print("Deleting instance...")
         instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
@@ -183,9 +228,10 @@ if journal:
         subprocess.run(["sudo", "systemctl", "restart", "nginx"])
         subprocess.run(["sudo", "systemctl", "restart", "postgresql"])
     elif operation == "add_user":
-        if 'i' not in args or 'u' not in args:
-            print("Please provide an instance name and a username")
-            sys.exit(1)
+        args = find_args(" ".join(sys.argv[2:]), {
+            'i': {'value': True, 'required': True, 'type': 'str'},
+            'u': {'value': True, 'required': True, 'type': 'str'},
+        })
         instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
             print("Instance not found")
@@ -193,9 +239,7 @@ if journal:
         instance.add_user(args['u'])
         instance.save()
     elif operation == "journal":
-        if 'i' not in args:
-            print("Please provide an instance name")
-            sys.exit(1)
+        args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
         instance = load_instance_data(f"{ROOT}{args['i']}")
         if not instance:
             print("Instance not found")
