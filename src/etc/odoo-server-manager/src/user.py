@@ -2,6 +2,9 @@ import subprocess
 import random
 
 
+ROOT = '/opt/odoo/'
+
+
 class User:
     def __init__(
             self,

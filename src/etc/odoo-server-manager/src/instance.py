@@ -15,9 +15,8 @@ def check_if_port_is_available(port):
     """
     Check if a port is available from all the odoo instances
     """
-    for instance_name in os.listdir("/opt/odoo"):
-        instance_data = load_instance_data(f"{ROOT}{instance_name}")
-        if instance_data and int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
+    for instance_data in load_all_instances():
+        if int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
             return False
     return True
 
@@ -84,6 +83,15 @@ class Instance:
 
     def _venv_exists(self):
         return os.path.exists(f"{ROOT}{self.instance_name}/venv")
+
+    def _replace_template(self, template):
+        template = template.replace("{{instance_name}}", self.instance_name)
+        template = template.replace("{{create_datetime}}", self.create_datetime)
+        template = template.replace("{{root}}", ROOT)
+        template = template.replace("{{odoo_version}}", self.odoo_version)
+        template = template.replace("{{port}}", str(self.port))
+        template = template.replace("{{longpolling_port}}", str(self.longpolling_port))
+        return template
 
     ############################
     # Update methods
@@ -174,43 +182,20 @@ class Instance:
         if os.path.exists(f"{ROOT}{self.instance_name}/odoo.conf"):
             print("Removing old odoo config")
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo.conf", shell=True)
+        odoo_template = open("templates/odoo.conf", "r").read()
+        odoo_template = self._replace_template(odoo_template)
         with open(f"{ROOT}{self.instance_name}/odoo.conf", "w") as f:
-            f.write(f"""[options]
-admin_passwd = odoo
-addons_path = {ROOT}{self.instance_name}/src/odoo/addons, {ROOT}{self.instance_name}/custom_addons
-logfile = {ROOT}{self.instance_name}/logs/odoo.log
-db_host = localhost
-db_port = 5432
-db_user = {self.instance_name}
-http_port = {self.port}
-longpolling_port = {self.longpolling_port}
-proxy_mode = True
-""")
+            f.write(odoo_template)
 
     def _create_service_config(self):
         print("Creating service config")
         if os.path.exists(f"/etc/systemd/system/{self.instance_name}.service"):
             print("Removing old service config")
             subprocess.run(f"sudo rm -rf /etc/systemd/system/{self.instance_name}.service", shell=True)
+        service_template = open("templates/service.conf", "r").read()
+        service_template = self._replace_template(service_template)
         with open(f"/etc/systemd/system/{self.instance_name}.service", "w") as f:
-            f.write(f"""[Unit]
-Description=Odoo Instance {self.instance_name}
-Requires=postgresql.service
-After=network.target postgresql.service
-
-[Service]
-Type=simple
-SyslogIdentifier={self.instance_name}
-PermissionsStartOnly=true
-ExecStart={ROOT}{self.instance_name}/venv/bin/python {ROOT}{self.instance_name}/src/odoo-bin -c {ROOT}{self.instance_name}/odoo.conf
-User={self.instance_name}
-Group={self.instance_name}
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-""")
-        print("Creating service symbolic link")
+            f.write(service_template)
         self.enable()
 
     def _create_ngnix_config(self):
@@ -222,82 +207,10 @@ WantedBy=multi-user.target
             print("Removing old nginx config (available)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
         server_name = f"{self.server_name};" if self.server_name else f"{self.instance_name}.example.com;"
+        nginx_template = open("templates/nginx.conf", "r").read()
+        nginx_template = nginx_template.replace("{{server_name}}", server_name)
         with open(f"/etc/nginx/sites-available/{self.instance_name}", "w") as f:
-            f.write(f"""#server {{
-#  listen 80;
-#  listen [::]:80;
-#  server_name {server_name};
-#  return 301 https://\$host\$request_uri;
-#}}
-
-server {{
-    listen 80;
-    #listen 443 ssl http2;
-    #listen [::]:443 ssl http2;
-    #ssl_certificate ;
-    #ssl_certificate_key ;
-    server_name {server_name};
-
-    root /var/www/html;
-
-    proxy_set_header X-Forwarded-Host \$host;
-    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto \$scheme;
-    proxy_set_header X-Real-IP \$remote_addr;
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-XSS-Protection "1; mode=block";
-    proxy_set_header X-Client-IP \$remote_addr;
-    proxy_set_header HTTP_X_FORWARDED_HOST \$remote_addr;
-
-    access_log /var/log/nginx/{self.instance_name}.access.log;
-    error_log /var/log/nginx/{self.instance_name}.error.log;
-    
-    proxy_buffers 16 64k;
-    proxy_buffer_size 128k;
-    proxy_read_timeout 900s;
-    proxy_connect_timeout 900s;
-    proxy_send_timeout 900s;
-    
-    proxy_next_upstream error timeout invalid_header http_500 http_502
-    http_503;
-    
-    types {{
-        text/less less;
-        text/scss scss;
-    }}
-    
-    gzip on;
-    gzip_min_length 1100;
-    gzip_buffers 4 32k;
-    gzip_types text/css text/less text/plain text/xml application/xml application/json application/javascript application/pdf image/jpeg image/png;
-    gzip_vary on;
-    client_header_buffer_size 4k;
-    large_client_header_buffers 4 64k;
-
-    location / {{
-        proxy_pass http://localhost:{self.port};
-        proxy_redirect off;
-        proxy_max_temp_file_size 0;
-    }}
-
-    location /longpolling {{
-        proxy_pass http://localhost:{self.longpolling_port};
-        proxy_redirect off;
-        proxy_max_temp_file_size 0;
-    }}
-
-    location ~* .(js|css)$ {{
-        expires 2d;
-        proxy_pass http://localhost:{self.port};
-        add_header Cache-Control "public, no-transform";
-    }}
-
-    location ~* .(jpg|jpeg|png|gif|ico)$ {{
-        expires 14d;
-        proxy_pass http://localhost:{self.port};
-        add_header Cache-Control "public, no-transform";
-    }}
-}}""")
+            f.write()
         self.enable_site()
         self.reload_nginx()
 
@@ -344,6 +257,7 @@ server {{
         subprocess.run(["sudo", "systemctl", "stop", self.instance_name + ".service"])
 
     def enable(self):
+        print("Creating service symbolic link")
         subprocess.run(["sudo", "systemctl", "enable", self.instance_name + ".service"])
 
     def disable(self):
@@ -412,13 +326,20 @@ server {{
             print(f"    Users                : {', '.join([user.username for user in self.user])}")
 
 
-def load_instance_data(file_path):
-    """
-    Load instance data from path. e.g. /opt/odoo/instance_name
-    """
+def load_instance_data(instance_name):
+    """ Load an instance from /opt/odoo """
     instance = None
-    if os.path.isdir(f"{file_path}") and os.path.exists(f"{file_path}/instance_data.pkl"):
-        with open(file_path + "/instance_data.pkl", "rb") as f:
+    if os.path.isdir(f"{ROOT}{instance_name}") and os.path.exists(f"{ROOT}{instance_name}/instance_data.pkl"):
+        with open(f"{ROOT}{instance_name}/instance_data.pkl", "rb") as f:
             instance = pickle.load(f)
     return instance
 
+
+def load_all_instances():
+    """ Load all instances from /opt/odoo """
+    instances = []
+    for instance_name in os.listdir(ROOT):
+        instance_data = load_instance_data(f"{ROOT}{instance_name}")
+        if instance_data:
+            instances.append(instance_data)
+    return instances

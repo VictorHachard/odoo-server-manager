@@ -1,10 +1,11 @@
+import re
 import sys
 import os
 import subprocess
 import platform
-from typing import Dict, re, Union
+from typing import Dict, Union
 
-from src.instance import load_instance_data, Instance
+from src.instance import load_instance_data, Instance, load_all_instances
 
 ROOT = '/opt/odoo/'
 PYTHON_DEPENDENCIES = [
@@ -162,11 +163,11 @@ if journal:
     elif operation == "list":
         args = find_args(" ".join(sys.argv[2:]), {'d': {'value': False}})
         details = 'd' in args
-        for instance_name in os.listdir("/opt/odoo"):
-            instance_data = load_instance_data(f"{ROOT}{instance_name}")
-            if instance_data and details:
+
+        for instance_data in load_all_instances():
+            if details:
                 instance_data.print_details()
-            elif instance_data:
+            else:
                 print(instance_data)
     elif operation == "create":
         args = find_args(" ".join(sys.argv[2:]), {
@@ -193,7 +194,7 @@ if journal:
         )
     elif operation == "update":
         args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
-        instance = load_instance_data(f"{ROOT}{args['i']}")
+        instance = load_instance_data(args['i'])
         if not instance:
             print("Instance not found")
             sys.exit(1)
@@ -204,7 +205,7 @@ if journal:
             'i': {'value': True, 'required': True, 'type': 'str'},
             'd': {'value': True, 'required': True, 'type': 'str'},
         })
-        instance = load_instance_data(f"{ROOT}{args['i']}")
+        instance = load_instance_data(args['i'])
         if not instance:
             print("Instance not found")
             sys.exit(1)
@@ -213,7 +214,7 @@ if journal:
     elif operation == "delete":
         args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
         print("Deleting instance...")
-        instance = load_instance_data(f"{ROOT}{args['i']}")
+        instance = load_instance_data(args['i'])
         if not instance:
             print("Instance not found")
             sys.exit(1)
@@ -232,7 +233,7 @@ if journal:
             'i': {'value': True, 'required': True, 'type': 'str'},
             'u': {'value': True, 'required': True, 'type': 'str'},
         })
-        instance = load_instance_data(f"{ROOT}{args['i']}")
+        instance = load_instance_data(args['i'])
         if not instance:
             print("Instance not found")
             sys.exit(1)
@@ -240,7 +241,7 @@ if journal:
         instance.save()
     elif operation == "journal":
         args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
-        instance = load_instance_data(f"{ROOT}{args['i']}")
+        instance = load_instance_data(args['i'])
         if not instance:
             print("Instance not found")
             sys.exit(1)
