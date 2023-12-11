@@ -114,14 +114,31 @@ def _install_odoo_dependencies():
 
 
 def _install_wkhtmltopdf():
+    base_repo = 'https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/'
     if subprocess.run(["which", "wkhtmltopdf"]).returncode == 0:
         return
     system_architecture = platform.machine()
+    arm = "arm" in system_architecture.lower()
+    amd64 = "amd64" in system_architecture.lower()
+    if not arm and not amd64:
+        print("Architecture not supported")
+        sys.exit(1)
 
-    if "arm" in system_architecture.lower():
-        package_url = "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_arm64.deb"
+    version = subprocess.run(["lsb_release", "-cs"], stdout=subprocess.PIPE).stdout.decode("utf-8").split("\n")[0]
+    if version == "focal":
+        package_url = base_repo + "wkhtmltox_0.12.6.1-3.jammy_"
+    elif version == "bionic":
+        package_url = base_repo + "wkhtmltox_0.12.6.1-3.bionic_"
+    elif version == "jammy":
+        package_url = base_repo + "wkhtmltox_0.12.6.1-3.jammy_"
     else:
-        package_url = "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb"
+        print("Ubuntu version not supported")
+        sys.exit(1)
+
+    if arm:
+        package_url += "arm64.deb"
+    else:
+        package_url += "amd64.deb"
 
     subprocess.run(["wget", package_url])
     subprocess.run(["sudo", "apt-get", "install", "./" + package_url.split("/")[-1], "-y"])
