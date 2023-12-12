@@ -7,6 +7,17 @@ import datetime
 from src.user import User
 from src.utils import check_if_port_is_free, check_if_port_is_valid, check_if_firewall_is_enabled, get_postgres_version
 
+class Bcolors:
+    HEADER  = '\033[95m'
+    OKBLUE  = '\033[94m'
+    OKCYAN  = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL    = '\033[91m'
+    ENDC    = '\033[0m'
+    BOLD    = '\033[1m'
+
+
 ROOT = '/opt/odoo/'
 TEMPLATE_ROOT = '/etc/odoo-server-manager/src/template/'
 
@@ -63,7 +74,7 @@ class Instance:
         if not check_port(self.longpolling_port):
             raise ValueError("Longpolling port is not free")
         if check_if_firewall_is_enabled():
-            print("Firewall is enabled. Please add port to firewall if needed.")
+            print(Bcolors.WARNING + "Firewall is enabled. Please add port to firewall if needed." + Bcolors.ENDC)
         self._create()
         self.update_odoo_code()
         self.save()
