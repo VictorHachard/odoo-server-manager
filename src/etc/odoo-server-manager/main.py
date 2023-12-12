@@ -119,7 +119,7 @@ def _install_wkhtmltopdf():
         return
     system_architecture = platform.machine()
     arm = "arm" in system_architecture.lower()
-    amd64 = "amd64" in system_architecture.lower()
+    amd64 = "x86_64" in system_architecture.lower()
     if not arm and not amd64:
         print("Architecture not supported")
         sys.exit(1)
