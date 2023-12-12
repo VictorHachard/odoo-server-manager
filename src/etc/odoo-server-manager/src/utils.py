@@ -28,4 +28,5 @@ def get_postgres_version() -> str:
     """
     Get the postgres version
     """
-    return subprocess.run(["psql", "--version"], stdout=subprocess.PIPE).stdout.decode("utf-8").split(" ")[2].split("\n")[0]
+    version = subprocess.run(["psql", "--version"], stdout=subprocess.PIPE).stdout.decode("utf-8").split(" ")[2].split("\n")[0]
+    return version.split(".")[0]
