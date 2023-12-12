@@ -248,12 +248,15 @@ class Instance:
         return subprocess.run(["sudo", "systemctl", "is-active", self.instance_name + ".service"], stdout=subprocess.PIPE).returncode == 0
 
     def restart(self):
+        print("Restarting service")
         subprocess.run(["sudo", "systemctl", "restart", self.instance_name + ".service"])
 
     def start(self):
+        print("Starting service")
         subprocess.run(["sudo", "systemctl", "start", self.instance_name + ".service"])
 
     def stop(self):
+        print("Stopping service")
         subprocess.run(["sudo", "systemctl", "stop", self.instance_name + ".service"])
 
     def enable(self):
@@ -261,12 +264,14 @@ class Instance:
         subprocess.run(["sudo", "systemctl", "enable", self.instance_name + ".service"])
 
     def disable(self):
+        print("Removing service symbolic link")
         subprocess.run(["sudo", "systemctl", "disable", self.instance_name + ".service"])
 
     def status(self):
         subprocess.run(["sudo", "systemctl", "status", self.instance_name + ".service"])
 
     def reload(self):
+        print("Reloading service")
         subprocess.run(["sudo", "systemctl", "reload", self.instance_name + ".service"])
 
     def journal(self, lines=100, follow=False):
@@ -280,15 +285,20 @@ class Instance:
     ############################
 
     def restart_nginx(self):
+        print("Restarting nginx")
         subprocess.run(["sudo", "systemctl", "restart", "nginx"])
 
     def reload_nginx(self):
+        print("Reloading nginx")
         subprocess.run(["sudo", "nginx", "-s", "reload"])
 
     def enable_site(self):
-        subprocess.run(["sudo", "ln", "-s", "/etc/nginx/sites-available/" + self.instance_name, "/etc/nginx/sites-enabled/" + self.instance_name])
+        print("Enabling nginx site")
+        if not os.path.exists("/etc/nginx/sites-enabled/" + self.instance_name):
+            subprocess.run(["sudo", "ln", "-s", "/etc/nginx/sites-available/" + self.instance_name, "/etc/nginx/sites-enabled/" + self.instance_name])
 
     def disable_site(self):
+        print("Disabling nginx site")
         if os.path.exists("/etc/nginx/sites-enabled/" + self.instance_name):
             subprocess.run(["sudo", "rm", "/etc/nginx/sites-enabled/" + self.instance_name])
 
