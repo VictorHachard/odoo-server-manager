@@ -311,10 +311,10 @@ class Instance:
         return f"{self.instance_name} - {self.odoo_version} - {'Running' if self.is_running() else 'Stopped'}"
 
     def print_details(self):
-        print(f"{self.instance_name} - {'🟢 Running' if self.is_running() else '🔴 Stopped'}:")
+        print(f"{'🟢' if self.is_running() else '🔴'} {self.instance_name}")
         if self.name:
             print(f"    Name                    {self.name}")
-        print(f"    Instance name           {self.instance_name}")
+        # print(f"    Instance name           {self.instance_name}")
         print(f"    Odoo version            {self.odoo_version}")
         print(f"    Port                    {self.port}")
         print(f"    Longpolling port        {self.longpolling_port}")
