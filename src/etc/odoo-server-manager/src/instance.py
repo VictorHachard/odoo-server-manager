@@ -86,8 +86,8 @@ class Instance:
 
     def _replace_template(self, template):
         template = template.replace("{{instance_name}}", self.instance_name)
-        template = template.replace("{{create_datetime}}", self.create_datetime)
-        template = template.replace("{{root}}", ROOT)
+        template = template.replace("{{create_datetime}}", str(self.create_datetime))
+        template = template.replace("{{ROOT}}", ROOT)
         template = template.replace("{{odoo_version}}", self.odoo_version)
         template = template.replace("{{port}}", str(self.port))
         template = template.replace("{{longpolling_port}}", str(self.longpolling_port))
@@ -210,7 +210,7 @@ class Instance:
         nginx_template = open(TEMPLATE_ROOT + "nginx.conf", "r").read()
         nginx_template = nginx_template.replace("{{server_name}}", server_name)
         with open(f"/etc/nginx/sites-available/{self.instance_name}", "w") as f:
-            f.write()
+            f.write(nginx_template)
         self.enable_site()
         self.reload_nginx()
 
@@ -311,15 +311,15 @@ class Instance:
         return f"{self.instance_name} - {self.odoo_version} - {'Running' if self.is_running() else 'Stopped'}"
 
     def print_details(self):
-        print(f"{self.instance_name} ({'Running' if self.is_running() else 'Stopped'}):")
+        print(f"{self.instance_name} - {'🟢 Running' if self.is_running() else '🔴 Stopped'}:")
         if self.name:
-            print(f"    Name                 : {self.name}")
-        print(f"    Instance name        : {self.instance_name}")
-        print(f"    Odoo version         : {self.odoo_version}")
-        print(f"    Port                 : {self.port}")
-        print(f"    Longpolling port     : {self.longpolling_port}")
-        print(f"    Create datetime      : {self.create_datetime}")
-        print(f"    Last update datetime : {self.last_update_datetime}")
+            print(f"    Name                    {self.name}")
+        print(f"    Instance name           {self.instance_name}")
+        print(f"    Odoo version            {self.odoo_version}")
+        print(f"    Port                    {self.port}")
+        print(f"    Longpolling port        {self.longpolling_port}")
+        print(f"    Create datetime         {self.create_datetime}")
+        print(f"    Last update datetime    {self.last_update_datetime}")
         if self.dependencies:
             print(f"    Dependencies         : {', '.join(self.dependencies)}")
         if self.user:
@@ -339,7 +339,7 @@ def load_all_instances():
     """ Load all instances from /opt/odoo """
     instances = []
     for instance_name in os.listdir(ROOT):
-        instance_data = load_instance_data(f"{ROOT}{instance_name}")
+        instance_data = load_instance_data(instance_name)
         if instance_data:
             instances.append(instance_data)
     return instances
