@@ -335,9 +335,11 @@ class Instance:
     ############################
 
     def __str__(self):
-        return f"{self.instance_name} - {self.odoo_version} - {'Running' if self.is_running() else 'Stopped'}"
+        """ Print instance name """
+        return f"{'🟢' if self.is_running() else '🔴'} {self.instance_name} - {self.odoo_version}"
 
     def print_details(self):
+        """ Print instance details """
         print(f"{'🟢' if self.is_running() else '🔴'} {self.instance_name}")
         if self.name:
             print(f"    Name                    {self.name}")

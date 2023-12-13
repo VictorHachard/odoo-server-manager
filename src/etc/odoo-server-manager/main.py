@@ -138,6 +138,39 @@ def find_args(
 
     return args
 
+def get_system_architecture():
+    architecture = platform.machine().lower()
+    if "arm" in architecture:
+        return "arm"
+    elif any(x in architecture for x in ["amd64", "x86_64"]):
+        return "amd64"
+    elif "i386" in architecture:
+        return "i386"
+    else:
+        return None
+
+def get_ubuntu_version():
+    try:
+        version = subprocess.run(["lsb_release", "-cs"], stdout=subprocess.PIPE).stdout.decode("utf-8").strip()
+        return version
+    except subprocess.SubprocessError:
+        print("Error obtaining Ubuntu version")
+        sys.exit(1)
+
+def construct_package_url(base_repo, ubuntu_version, system_arch):
+    if ubuntu_version in ["focal", "bionic", "jammy"]:
+        package_url = f"{base_repo}wkhtmltox_0.12.6.1-3.{ubuntu_version}_"
+    else:
+        print(f"Ubuntu version '{ubuntu_version}' not supported")
+        sys.exit(1)
+
+    if system_arch:
+        package_url += f"{system_arch}.deb"
+    else:
+        print("System architecture not supported")
+        sys.exit(1)
+
+    return package_url
 
 def _install_odoo_dependencies():
     # Check if nginx is installed
@@ -159,31 +192,15 @@ def _install_odoo_dependencies():
 
 
 def _install_wkhtmltopdf():
-    base_repo = 'https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/'
     if subprocess.run(["which", "wkhtmltopdf"]).returncode == 0:
+        print("wkhtmltopdf already installed")
         return
-    system_architecture = platform.machine()
-    arm = "arm" in system_architecture.lower()
-    amd64 = "x86_64" in system_architecture.lower()
-    if not arm and not amd64:
-        print("Architecture not supported")
-        sys.exit(1)
+    print("Installing wkhtmltopdf...")
 
-    version = subprocess.run(["lsb_release", "-cs"], stdout=subprocess.PIPE).stdout.decode("utf-8").split("\n")[0]
-    if version == "focal":
-        package_url = base_repo + "wkhtmltox_0.12.6.1-3.jammy_"
-    elif version == "bionic":
-        package_url = base_repo + "wkhtmltox_0.12.6.1-3.bionic_"
-    elif version == "jammy":
-        package_url = base_repo + "wkhtmltox_0.12.6.1-3.jammy_"
-    else:
-        print("Ubuntu version not supported")
-        sys.exit(1)
-
-    if arm:
-        package_url += "arm64.deb"
-    else:
-        package_url += "amd64.deb"
+    base_repo = 'https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/'
+    system_arch = get_system_architecture()
+    ubuntu_version = get_ubuntu_version()
+    package_url = construct_package_url(base_repo, ubuntu_version, system_arch)
 
     subprocess.run(["wget", package_url])
     subprocess.run(["sudo", "apt-get", "install", "./" + package_url.split("/")[-1], "-y"])
