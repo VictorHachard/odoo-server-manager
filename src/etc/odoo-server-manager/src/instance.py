@@ -5,18 +5,8 @@ import hashlib
 import datetime
 
 from src.user import User
-from src.utils import check_if_port_is_free, check_if_port_is_valid, check_if_firewall_is_enabled, get_postgres_version
-
-class Bcolors:
-    HEADER  = '\033[95m'
-    OKBLUE  = '\033[94m'
-    OKCYAN  = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL    = '\033[91m'
-    ENDC    = '\033[0m'
-    BOLD    = '\033[1m'
-
+from src.utils import check_if_port_is_free, check_if_port_is_valid, check_if_firewall_is_enabled, get_postgres_version, \
+    Bcolors
 
 ROOT = '/opt/odoo/'
 TEMPLATE_ROOT = '/etc/odoo-server-manager/src/template/'
@@ -105,6 +95,9 @@ class Instance:
         template = template.replace("{{port}}", str(self.port))
         template = template.replace("{{longpolling_port}}", str(self.longpolling_port))
         return template
+
+    def get_server_name(self):
+        return self.server_name or f"{self.instance_name}.example.com"
 
     ############################
     # Update methods
@@ -221,9 +214,8 @@ class Instance:
         if os.path.exists(f"/etc/nginx/sites-available/{self.instance_name}"):
             print("Removing old nginx config (available)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
-        server_name = f"{self.server_name};" if self.server_name else f"{self.instance_name}.example.com;"
         nginx_template = open(TEMPLATE_ROOT + self.nginx_template, "r").read()
-        nginx_template = nginx_template.replace("{{server_name}}", server_name)
+        nginx_template = nginx_template.replace("{{server_name}}", self.get_server_name())
         with open(f"/etc/nginx/sites-available/{self.instance_name}", "w") as f:
             f.write(nginx_template)
         self.enable_site()

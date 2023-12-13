@@ -2,6 +2,17 @@ import subprocess
 import socket
 
 
+class Bcolors:
+    HEADER  = '\033[95m'
+    OKBLUE  = '\033[94m'
+    OKCYAN  = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL    = '\033[91m'
+    ENDC    = '\033[0m'
+    BOLD    = '\033[1m'
+
+
 def check_if_firewall_is_enabled() -> bool:
     """ Check if the firewall is enabled """
     return subprocess.run(["sudo", "ufw", "status"], stdout=subprocess.PIPE).returncode == 0

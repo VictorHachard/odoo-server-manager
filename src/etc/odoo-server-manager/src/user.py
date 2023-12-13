@@ -1,6 +1,7 @@
 import subprocess
 import random
 
+from src.utils import Bcolors
 
 ROOT = '/opt/odoo/'
 
@@ -31,7 +32,7 @@ class User:
         subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{instance_name} {self.username}", shell=True)
         print(f"Creating user {self.username} with password {new_password}")
         if not self._check_ssh_password_auth():
-            print("Password authentication is not enabled for ssh. Please enable it to be able to connect to the instance via ssh.")
+            print(Bcolors.WARNING + "Password authentication is not enabled for ssh. Please enable it to be able to connect to the instance via ssh." + Bcolors.ENDC)
         subprocess.run(f"echo {self.username}:{new_password} | sudo chpasswd", shell=True)
         subprocess.run(f"sudo usermod -a -G {instance_name} {self.username}", shell=True)
 
