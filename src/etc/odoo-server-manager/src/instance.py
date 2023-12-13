@@ -23,9 +23,7 @@ TEMPLATE_ROOT = '/etc/odoo-server-manager/src/template/'
 
 
 def check_if_port_is_available(port):
-    """
-    Check if a port is available from all the odoo instances
-    """
+    """ Check if a port is available from all the odoo instances """
     for instance_data in load_all_instances():
         if int(instance_data.port) == int(port) or int(instance_data.longpolling_port) == int(port):
             return False
@@ -33,9 +31,7 @@ def check_if_port_is_available(port):
 
 
 def check_port(port):
-    """
-    Check if a port is free, available and valid
-    """
+    """ Check if a port is free, available and valid """
     if check_if_port_is_free(port):
         if check_if_port_is_available(port):
             if check_if_port_is_valid(port):
@@ -166,8 +162,7 @@ class Instance:
 
     def _create_user(self):
         print("Creating user")
-        subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{self.instance_name} {self.instance_name}",
-                       shell=True)
+        subprocess.run(f"sudo useradd -r -s /bin/bash -d {ROOT}{self.instance_name} {self.instance_name}", shell=True)
         subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}", shell=True)
 
     def _create_folder_structure(self):
@@ -224,7 +219,7 @@ class Instance:
             print("Removing old nginx config (available)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
         server_name = f"{self.server_name};" if self.server_name else f"{self.instance_name}.example.com;"
-        nginx_template = open(TEMPLATE_ROOT + + self.nginx_template, "r").read()
+        nginx_template = open(TEMPLATE_ROOT + self.nginx_template, "r").read()
         nginx_template = nginx_template.replace("{{server_name}}", server_name)
         with open(f"/etc/nginx/sites-available/{self.instance_name}", "w") as f:
             f.write(nginx_template)
@@ -350,9 +345,9 @@ class Instance:
         print(f"    Create datetime         {self.create_datetime}")
         print(f"    Last update datetime    {self.last_update_datetime}")
         if self.dependencies:
-            print(f"    Dependencies         : {', '.join(self.dependencies)}")
+            print(f"    Dependencies            {', '.join(self.dependencies)}")
         if self.user:
-            print(f"    Users                : {', '.join([user.username for user in self.user])}")
+            print(f"    Users                   {', '.join([user.username for user in self.user])}")
 
 
 def load_instance_data(instance_name):
