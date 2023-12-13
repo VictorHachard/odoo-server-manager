@@ -1,0 +1,69 @@
+name: Build Debian Package
+
+on:
+  push:
+    branches:
+      - main  # Modify this according to your branch
+
+jobs:
+  build-deb-package:
+    runs-on: ubuntu-latest  # Use the appropriate runner for your requirements
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debhelper dh-make dh-python
+
+      - name: Update chmod of odoo-server-manager
+        run: |
+          chmod +x src/usr/bin/odoo-server-manager
+      
+      - name: Build package
+        run: |
+          dpkg-deb --build src
+
+      - name: Rename package
+        run: mv src.deb odoo-server-manager.deb
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: deb-package
+          path: odoo-server-manager.deb
+
+  release-deb:
+    needs: build-deb-package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: deb-package
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload release asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./odoo-server-manager.deb
+          asset_name: odoo-server-manager.deb
+          asset_content_type: application/x-deb
+      
