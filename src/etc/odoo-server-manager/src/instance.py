@@ -57,6 +57,9 @@ class Instance:
             longpolling_port: int = 8072,
             friendly_name: str = None,
             server_name: str = None,
+            odoo_template: str = None,
+            service_template: str = None,
+            nginx_template: str = None,
     ):
         self.create_datetime = datetime.datetime.now()
         self.instance_name = hashlib.md5(f"{odoo_version}-{self.create_datetime}".encode()).hexdigest()
@@ -66,6 +69,9 @@ class Instance:
         self.port = port
         self.longpolling_port = longpolling_port
         self.server_name = server_name
+        self.odoo_template = odoo_template or 'odoo.conf'
+        self.service_template = service_template or 'service.conf'
+        self.nginx_template = nginx_template or 'nginx.conf'
         self.user = []
         self.dependencies = []
         # Check if port is free
@@ -193,7 +199,7 @@ class Instance:
         if os.path.exists(f"{ROOT}{self.instance_name}/odoo.conf"):
             print("Removing old odoo config")
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo.conf", shell=True)
-        odoo_template = open(TEMPLATE_ROOT + "odoo.conf", "r").read()
+        odoo_template = open(TEMPLATE_ROOT + self.odoo_template, "r").read()
         odoo_template = self._replace_template(odoo_template)
         with open(f"{ROOT}{self.instance_name}/odoo.conf", "w") as f:
             f.write(odoo_template)
@@ -203,7 +209,7 @@ class Instance:
         if os.path.exists(f"/etc/systemd/system/{self.instance_name}.service"):
             print("Removing old service config")
             subprocess.run(f"sudo rm -rf /etc/systemd/system/{self.instance_name}.service", shell=True)
-        service_template = open(TEMPLATE_ROOT + "service.conf", "r").read()
+        service_template = open(TEMPLATE_ROOT + self.service_template, "r").read()
         service_template = self._replace_template(service_template)
         with open(f"/etc/systemd/system/{self.instance_name}.service", "w") as f:
             f.write(service_template)
@@ -218,7 +224,7 @@ class Instance:
             print("Removing old nginx config (available)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
         server_name = f"{self.server_name};" if self.server_name else f"{self.instance_name}.example.com;"
-        nginx_template = open(TEMPLATE_ROOT + "nginx.conf", "r").read()
+        nginx_template = open(TEMPLATE_ROOT + + self.nginx_template, "r").read()
         nginx_template = nginx_template.replace("{{server_name}}", server_name)
         with open(f"/etc/nginx/sites-available/{self.instance_name}", "w") as f:
             f.write(nginx_template)

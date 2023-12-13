@@ -32,6 +32,51 @@ PYTHON_DEPENDENCIES = [
     "libatlas-base-dev",
 ]
 
+MAN = """
+Odoo Server Manager Commands:
+
+1. List Instances (list):
+   - -d: Show details (optional).
+     e.g., list -d
+
+2. Create Instance (create):
+   - -v: Odoo version (e.g., 16.0) [required]
+   - -p: Port (e.g., 8069) [required]
+   - -l: Longpolling port (e.g., 8072) [required]
+   - -n: Friendly name (optional)
+   - -s: Server name (optional)
+   - -ot: Odoo template (optional)
+   - -st: Service template (optional)
+   - -nt: Nginx template (optional)
+     e.g., create -v 16.0 -p 8069 -l 8072 -n odoo-16 
+     e.g., create -v 16.0 -p 8069 -l 8072 -n odoo-16 -s odoo-16.example.com -ot odoo-16.conf -st odoo-16.service -nt odoo-16.nginx
+
+3. Update Instance (update):
+   - -i: Instance name [required]
+     e.g., update -i instance_name
+
+4. Add Dependency (add_dependency):
+   - -i: Instance name [required]
+   - -d: Dependency name [required]
+     e.g., add_dependency -i instance_name -d Babel
+
+5. Delete Instance (delete):
+   - -n: Instance name [required]
+     e.g., delete -n instance_name
+
+6. Add User (add_user):
+   - -i: Instance name [required]
+   - -u: Username [required]
+     e.g., add_user -i instance_name -u admin
+
+7. View Journal (journal):
+   - -i: Instance name [required]
+     e.g., journal -i instance_name
+
+8. Help (help):
+   - Shows this guide.
+     e.g., help
+"""
 
 def find_args(
         input_string: str,
@@ -147,28 +192,6 @@ def _install_wkhtmltopdf():
 
 if __name__ == "__main__":
     error = "Please provide an operation (list, create, update, add_dependency, delete, add_user, journal, help)"
-    man = """First argument is the operation (list, create, update, add_dependency, delete, add_user, journal, help)
-if list:
-    -d (optional)
-if create:
-    -v odoo_version (x.x) (required) (example: 16.0)
-    -p port (required) (example: 8069)
-    -l longpolling_port (required) (example: 8072)
-    -n friendly_name (optional) (example: "odoo-16")
-    -s server_name (optional) (example: "odoo-16.example.com")
-if update:
-    -i instance_name (required)
-if add_dependency:
-    -i instance_name (required)
-    -d dependency_name (required) (example: "Babel")
-if delete:
-    -n instance_name (required)
-if add_user: 
-    -i instance_name (required)
-    -u username (required) (example: admin)
-if journal:
-    -i instance_name (required)
-"""
     if not os.path.exists("/opt/odoo"):
         subprocess.run(["sudo", "mkdir", "/opt/odoo"])
     if len(sys.argv) < 2:
@@ -176,7 +199,7 @@ if journal:
         sys.exit(1)
     operation = sys.argv[1]
     if operation == "help":
-        print(man)
+        print(MAN)
     elif operation == "list":
         args = find_args(" ".join(sys.argv[2:]), {'d': {'value': False}})
         details = 'd' in args
@@ -193,6 +216,10 @@ if journal:
             'l': {'value': True, 'required': True, 'type': 'int'},
             'n': {'value': True, 'required': False, 'type': 'str'},
             's': {'value': True, 'required': False, 'type': 'str'},
+
+            'ot': {'value': True, 'required': False, 'type': 'str'},
+            'st': {'value': True, 'required': False, 'type': 'str'},
+            'nt': {'value': True, 'required': False, 'type': 'str'},
         })
         if 'v' not in args or 'p' not in args or 'l' not in args:
             print("Please provide an odoo_version, a port and a longpolling_port")
@@ -208,6 +235,9 @@ if journal:
             port=int(args['p']),
             longpolling_port=int(args['l']),
             server_name=args['s'] if 's' in args else '',
+            odoo_template=args['ot'] if 'ot' in args else 'odoo.conf',
+            service_template=args['st'] if 'st' in args else 'service.conf',
+            nginx_template=args['nt'] if 'nt' in args else 'nginx.conf',
         )
     elif operation == "update":
         args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
