@@ -1,15 +1,15 @@
 # Odoo Server Manager
 
-This is a simple tool to manage Odoo instances on a server. It is written in Python.
+This is a simple python tool to manage Odoo instances on a linux server.
 
 ## Installation
 
 ```bash
-wget ....deb
+wget https://github.com/VictorHachard/odoo-server-setup/releases/latest/download/odoo-server-manager.deb
 ```
 
 ```bash
-sudo apt install ./odoo-server-manager.deb
+sudo apt install ./odoo-server-manager.deb -y
 ```
 
 ## Usage

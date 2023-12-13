@@ -16,11 +16,14 @@ class User:
         return "".join(random.choice('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz') for i in range(16))
 
     def _check_ssh_password_auth(self) -> bool:
-        """ Check if ssh password authentication is enabled """
+        """Check if ssh password authentication is enabled."""
         with open("/etc/ssh/sshd_config") as f:
             for line in f.readlines():
+                # Skip comments and empty lines
+                if line.startswith("#") or not line.strip():
+                    continue
                 if line.startswith("PasswordAuthentication"):
-                    return line.split(" ")[1].strip() == "yes"
+                    return line.split()[1].strip() == "yes"
         return False
 
     def create(self, instance_name):

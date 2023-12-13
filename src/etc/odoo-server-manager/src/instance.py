@@ -127,6 +127,7 @@ class Instance:
         subprocess.run(f"sudo unzip -q {ROOT}{self.instance_name}/odoo_{self.odoo_version}.latest.zip -d {ROOT}{self.instance_name}/update_temp", shell=True)
 
         subprocess.run(f"sudo mv {ROOT}{self.instance_name}/update_temp/*/ {ROOT}{self.instance_name}/src", shell=True)
+        subprocess.run(f"sudo chown -R {self.instance_name}:{self.instance_name} {ROOT}{self.instance_name}/src", shell=True)
 
         # Copy setup/odoo to src/odoo-bin
         subprocess.run(f"sudo cp {ROOT}{self.instance_name}/src/setup/odoo {ROOT}{self.instance_name}/src/odoo-bin", shell=True)
@@ -157,6 +158,8 @@ class Instance:
         self._create_postgresql_user()
         self._create_venv()
         self._create_odoo_config()
+        self.chown()
+
         self._create_service_config()
         self._create_ngnix_config()
 
