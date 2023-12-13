@@ -1,9 +1,14 @@
 name: Build Debian Package
 
+#on:
+#  push:
+#    branches:
+#      - main  # Modify this according to your branch
 on:
   push:
-    branches:
-      - main  # Modify this according to your branch
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
   build-deb-package:
