@@ -179,28 +179,28 @@ class Instance:
         self.restart_postgresql()
 
     def _create_venv(self):
-        print("Creating venv")
         self.chown()
         if self._venv_exists():
             print("Removing old venv")
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/venv", shell=True)
+        print("Creating venv")
         subprocess.run(f"sudo -u {self.instance_name} bash -c \"python3 -m venv {ROOT}{self.instance_name}/venv\"", shell=True)
 
     def _create_odoo_config(self):
-        print("Creating odoo config")
         if os.path.exists(f"{ROOT}{self.instance_name}/odoo.conf"):
             print("Removing old odoo config")
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo.conf", shell=True)
+        print("Creating odoo config")
         odoo_template = open(TEMPLATE_ROOT + self.odoo_template, "r").read()
         odoo_template = self._replace_template(odoo_template)
         with open(f"{ROOT}{self.instance_name}/odoo.conf", "w") as f:
             f.write(odoo_template)
 
     def _create_service_config(self):
-        print("Creating service config")
         if os.path.exists(f"/etc/systemd/system/{self.instance_name}.service"):
             print("Removing old service config")
             subprocess.run(f"sudo rm -rf /etc/systemd/system/{self.instance_name}.service", shell=True)
+        print("Creating service config")
         service_template = open(TEMPLATE_ROOT + self.service_template, "r").read()
         service_template = self._replace_template(service_template)
         with open(f"/etc/systemd/system/{self.instance_name}.service", "w") as f:
@@ -208,13 +208,13 @@ class Instance:
         self.enable()
 
     def _create_ngnix_config(self):
-        print("Creating nginx config")
         if os.path.exists(f"/etc/nginx/sites-enabled/{self.instance_name}"):
             print("Removing old nginx config (enabled)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-enabled/{self.instance_name}", shell=True)
         if os.path.exists(f"/etc/nginx/sites-available/{self.instance_name}"):
             print("Removing old nginx config (available)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
+        print("Creating nginx config")
         nginx_template = open(TEMPLATE_ROOT + self.nginx_template, "r").read()
         nginx_template = self._replace_template(nginx_template)
         nginx_template = nginx_template.replace("{{server_name}}", self.get_server_name())
@@ -222,6 +222,20 @@ class Instance:
             f.write(nginx_template)
         self.enable_site()
         self.reload_nginx()
+
+    ############################
+    # Reset methods
+    ############################
+
+    def reset(self, type):
+        if type == "odoo":
+            self._create_odoo_config()
+        elif type == "nginx":
+            self._create_ngnix_config()
+        elif type == "service":
+            self._create_service_config()
+        else:
+            print("Unknown reset type")
 
     ############################
     # Delete methods
@@ -329,7 +343,11 @@ class Instance:
 
     def __str__(self):
         """ Print instance name """
-        return f"{'🟢' if self.is_running() else '🔴'} {self.instance_name} - {self.odoo_version}"
+        res = f"{'🟢' if self.is_running() else '🔴'}"
+        if self.name:
+            res += f" {self.name} -"
+        res += f" {self.instance_name} - {self.odoo_version}"
+        return res
 
     def print_details(self):
         """ Print instance details """

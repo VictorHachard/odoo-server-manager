@@ -35,11 +35,11 @@ PYTHON_DEPENDENCIES = [
 MAN = """
 Odoo Server Manager Commands:
 
-1. List Instances (list):
+List Instances (list):
    - -d: Show details (optional).
      e.g., list -d
 
-2. Create Instance (create):
+Create Instance (create):
    - -v: Odoo version (e.g., 16.0) [required]
    - -p: Port (e.g., 8069) [required]
    - -l: Longpolling port (e.g., 8072) [required]
@@ -51,29 +51,34 @@ Odoo Server Manager Commands:
      e.g., create -v 16.0 -p 8069 -l 8072 -n odoo-16 
      e.g., create -v 16.0 -p 8069 -l 8072 -n odoo-16 -s odoo-16.example.com -ot odoo-16.conf -st odoo-16.service -nt odoo-16.nginx
 
-3. Update Instance (update):
+Reset Instance (reset):
+    - -i: Instance name [required]
+    - -t: Type (e.g., odoo, nginx, service) [required]
+        e.g., reset -i instance_name
+
+Update Instance (update):
    - -i: Instance name [required]
      e.g., update -i instance_name
 
-4. Add Dependency (add_dependency):
+Add Dependency (add_dependency):
    - -i: Instance name [required]
    - -d: Dependency name [required]
      e.g., add_dependency -i instance_name -d Babel
 
-5. Delete Instance (delete):
+Delete Instance (delete):
    - -n: Instance name [required]
      e.g., delete -n instance_name
 
-6. Add User (add_user):
+Add User (add_user):
    - -i: Instance name [required]
    - -u: Username [required]
      e.g., add_user -i instance_name -u admin
 
-7. View Journal (journal):
+View Journal (journal):
    - -i: Instance name [required]
      e.g., journal -i instance_name
 
-8. Help (help):
+Help (help):
    - Shows this guide.
      e.g., help
 """
@@ -256,6 +261,20 @@ if __name__ == "__main__":
             service_template=args['st'] if 'st' in args else 'service.conf',
             nginx_template=args['nt'] if 'nt' in args else 'nginx.conf',
         )
+    elif operation == "reset":
+        args = find_args(" ".join(sys.argv[2:]), {
+            'i': {'value': True, 'required': True, 'type': 'str'},
+            't': {'value': True, 'required': True, 'type': 'str'},
+        })
+        if args['t'] not in ["odoo", "nginx", "service"]:
+            print("Please provide a valid type (odoo, nginx, service)")
+            sys.exit(1)
+        instance = load_instance_data(args['i'])
+        if not instance:
+            print("Instance not found")
+            sys.exit(1)
+        instance.reset(args['t'])
+        instance.restart()
     elif operation == "update":
         args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
         instance = load_instance_data(args['i'])
