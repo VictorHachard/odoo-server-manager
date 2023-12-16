@@ -215,6 +215,7 @@ class Instance:
             print("Removing old nginx config (available)")
             subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
         nginx_template = open(TEMPLATE_ROOT + self.nginx_template, "r").read()
+        nginx_template = self._replace_template(nginx_template)
         nginx_template = nginx_template.replace("{{server_name}}", self.get_server_name())
         with open(f"/etc/nginx/sites-available/{self.instance_name}", "w") as f:
             f.write(nginx_template)
