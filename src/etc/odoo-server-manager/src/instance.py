@@ -140,6 +140,7 @@ class Instance:
         if dependency not in self.dependencies:
             self.dependencies.append(dependency)
             self.update_requirements()
+        self.save()
 
     ############################
     # Create methods
