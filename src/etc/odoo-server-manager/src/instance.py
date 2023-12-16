@@ -236,6 +236,7 @@ class Instance:
 
         self.disable()
         subprocess.run(f"sudo rm -rf /etc/systemd/system/{self.instance_name}.service", shell=True)
+        subprocess.run(["sudo", "rm", "-rf", f"/etc/systemd/system/multi-user.target.wants/{self.instance_name}.service"])
 
         subprocess.run(f"sudo rm -rf /etc/nginx/sites-available/{self.instance_name}", shell=True)
         subprocess.run(f"sudo rm -rf /etc/nginx/sites-enabled/{self.instance_name}", shell=True)

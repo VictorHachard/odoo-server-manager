@@ -284,14 +284,7 @@ if __name__ == "__main__":
             sys.exit(1)
         for user in instance.users:
             user.delete()
-        subprocess.run(["sudo", "rm", "-rf", f"{ROOT}{args['i']}"])
-        subprocess.run(["sudo", "rm", "-rf", f"/etc/nginx/sites-available/{args['i']}"])
-        subprocess.run(["sudo", "rm", "-rf", f"/etc/nginx/sites-enabled/{args['i']}"])
-        subprocess.run(["sudo", "rm", "-rf", f"/etc/systemd/system/{args['i']}.service"])
-        subprocess.run(["sudo", "rm", "-rf", f"/etc/systemd/system/multi-user.target.wants/{args['i']}.service"])
-        subprocess.run(["sudo", "systemctl", "daemon-reload"])
-        subprocess.run(["sudo", "systemctl", "restart", "nginx"])
-        subprocess.run(["sudo", "systemctl", "restart", "postgresql"])
+        instance.delete()
     elif operation == "add_user":
         args = find_args(" ".join(sys.argv[2:]), {
             'i': {'value': True, 'required': True, 'type': 'str'},
