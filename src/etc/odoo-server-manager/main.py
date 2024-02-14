@@ -41,6 +41,7 @@ List Instances (list):
 
 Create Instance (create):
    - -v: Odoo version (e.g., 16.0) [required]
+   - -d: Odoo date (e.g., 20211010) [optional]
    - -p: Port (e.g., 8069) [required]
    - -l: Longpolling port (e.g., 8072) [required]
    - -n: Friendly name (optional)
@@ -58,7 +59,9 @@ Reset Instance (reset):
 
 Update Instance (update):
    - -i: Instance name [required]
+   - -d: Odoo date (e.g., 20211010) [optional]
      e.g., update -i instance_name
+     e.g., update -i instance_name -d 20211010
 
 Add Dependency (add_dependency):
    - -i: Instance name [required]
@@ -234,6 +237,7 @@ if __name__ == "__main__":
     elif operation == "create":
         args = find_args(" ".join(sys.argv[2:]), {
             'v': {'value': True, 'required': True, 'type': 'str'},
+            'd': {'value': True, 'required': False, 'type': 'str'},
             'p': {'value': True, 'required': True, 'type': 'int'},
             'l': {'value': True, 'required': True, 'type': 'int'},
             'n': {'value': True, 'required': False, 'type': 'str'},
@@ -254,6 +258,7 @@ if __name__ == "__main__":
         instance = Instance(
             friendly_name=args['n'] if 'n' in args else '',
             odoo_version=args['v'],
+            odoo_date=args['d'] if 'd' in args else '',
             port=int(args['p']),
             longpolling_port=int(args['l']),
             server_name=args['s'] if 's' in args else '',
@@ -276,11 +281,16 @@ if __name__ == "__main__":
         instance.reset(args['t'])
         instance.restart()
     elif operation == "update":
-        args = find_args(" ".join(sys.argv[2:]), {'i': {'value': True, 'required': True, 'type': 'str'}})
+        args = find_args(" ".join(sys.argv[2:]), {
+            'i': {'value': True, 'required': True, 'type': 'str'},
+            'd': {'value': True, 'required': False, 'type': 'str'},
+        })
         instance = load_instance_data(args['i'])
         if not instance:
             print("Instance not found")
             sys.exit(1)
+        if args['d']:
+            instance.odoo_date = args['d']
         instance.update_odoo_code()
         instance.restart()
     elif operation == "add_dependency":

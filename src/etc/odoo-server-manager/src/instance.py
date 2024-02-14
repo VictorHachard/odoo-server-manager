@@ -39,6 +39,7 @@ class Instance:
     def __init__(
             self,
             odoo_version: str,
+            odoo_date: str = None,  # Like 20210101
             port: int = 8069,
             longpolling_port: int = 8072,
             friendly_name: str = None,
@@ -51,6 +52,7 @@ class Instance:
         self.instance_name = hashlib.md5(f"{odoo_version}-{self.create_datetime}".encode()).hexdigest()
         self.name = friendly_name
         self.odoo_version = odoo_version
+        self.odoo_date = odoo_date
         self.last_update_datetime = None
         self.port = port
         self.longpolling_port = longpolling_port
@@ -108,16 +110,25 @@ class Instance:
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/update_temp", shell=True)
         subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}/update_temp", shell=True)
 
-        if os.path.exists(f"{ROOT}{self.instance_name}/odoo_{self.odoo_version}.latest.zip"):
-            subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo_{self.odoo_version}.latest.zip", shell=True)
+        if self.odoo_date:
+            if os.path.exists(f"{ROOT}{self.instance_name}/odoo_{self.odoo_version}_{self.odoo_date}.zip"):
+                subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo_{self.odoo_version}_{self.odoo_date}.zip", shell=True)
+
+            wget_command = f"sudo wget https://nightly.odoo.com/{self.odoo_version}/nightly/src/odoo_{self.odoo_version}_{self.odoo_date}.zip -P {ROOT}{self.instance_name}"
+            subprocess.run(wget_command, shell=True)
+
+            subprocess.run(f"sudo unzip -q {ROOT}{self.instance_name}/odoo_{self.odoo_version}_{self.odoo_date}.zip -d {ROOT}{self.instance_name}/update_temp", shell=True)
+        else:
+            if os.path.exists(f"{ROOT}{self.instance_name}/odoo_{self.odoo_version}.latest.zip"):
+                subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/odoo_{self.odoo_version}.latest.zip", shell=True)
+
+            wget_command = f"sudo wget https://nightly.odoo.com/{self.odoo_version}/nightly/src/odoo_{self.odoo_version}.latest.zip -P {ROOT}{self.instance_name}"
+            subprocess.run(wget_command, shell=True)
+
+            subprocess.run(f"sudo unzip -q {ROOT}{self.instance_name}/odoo_{self.odoo_version}.latest.zip -d {ROOT}{self.instance_name}/update_temp", shell=True)
 
         if os.path.exists(f"{ROOT}{self.instance_name}/src"):
             subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/src", shell=True)
-
-        wget_command = f"sudo wget https://nightly.odoo.com/{self.odoo_version}/nightly/src/odoo_{self.odoo_version}.latest.zip -P {ROOT}{self.instance_name}"
-        subprocess.run(wget_command, shell=True)
-
-        subprocess.run(f"sudo unzip -q {ROOT}{self.instance_name}/odoo_{self.odoo_version}.latest.zip -d {ROOT}{self.instance_name}/update_temp", shell=True)
 
         subprocess.run(f"sudo mv {ROOT}{self.instance_name}/update_temp/*/ {ROOT}{self.instance_name}/src", shell=True)
         subprocess.run(f"sudo chown -R {self.instance_name}:{self.instance_name} {ROOT}{self.instance_name}/src", shell=True)

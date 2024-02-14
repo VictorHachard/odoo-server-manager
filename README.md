@@ -23,6 +23,7 @@ sudo apt install ./odoo-server-manager.deb -y
 - `-p`: Declare the port, 8069 style (mandatory).
 - `-l`: Longpolling port, say 8072 (mandatory).
 - Add-ons: 
+  - `-d`: Date, for a precise odoo version.
   - `-n`: Friendly name, if you're into naming your servers.
   - `-s`: Server name, for the more formal occasions.
   - `-ot`: Custom Odoo template, if you're picky.
@@ -44,7 +45,9 @@ Examples:
 
 ### Special Ops (Update Instance)
 - `-i`: Instance name (mandatory).
+- `-d`: Date, for a precise odoo version.
 - Example: `odoo-server-manager update -i your_instance_name`
+- For the fancy: `odoo-server-manager update -i your_instance_name -d 20210501`
 
 ### Supply Drop (Add Dependency)
 - `-i`: Instance name (mandatory).
