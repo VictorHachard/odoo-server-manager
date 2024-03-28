@@ -276,6 +276,50 @@ class Instance:
         subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}", shell=True)
 
     ############################
+    # Backup methods
+    ############################
+
+    # def backup(self):
+    #     print("Creating backup")
+    #     backup_url = '{}/web/database/backup'.format(self.get_server_name())
+    #     params = {
+    #         'master_pwd': self.password,
+    #         'name': self.db,
+    #         'backup_format': 'zip'
+    #     }
+    #     response = requests.post(backup_url, data=params, stream=True)
+    #
+    #     if response.status_code != 200:
+    #         raise Exception("Backup failed with status code {}".format(response.status_code))
+    #
+    #     backup_file_path = '/path/to/save/backup/{}_backup.zip'.format(self.db)
+    #     with open(backup_file_path, 'wb') as f:
+    #         for chunk in response.iter_content(chunk_size=128):
+    #             f.write(chunk)
+    #
+    #     print("Backup saved to {}".format(backup_file_path))
+    #
+    # def backup_raw(self, database_name):
+    #     """  Create a backup of a database (dump and copy filestore in a zip) """
+    #     subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}/backup_temp", shell=True)
+    #     subprocess.run(f"sudo mkdir {ROOT}{self.instance_name}/backup_temp", shell=True)
+    #     subprocess.run(f"sudo chown -R {self.instance_name}:{self.instance_name} {ROOT}{self.instance_name}/backup_temp", shell=True)
+    #
+    #     print("Creating backup")
+    #     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    #     filestore_path = f"{ROOT}{self.instance_name}/.local/share/Odoo/filestore/{database_name}"
+    #     backup_name = f"{database_name}_{timestamp}.zip"
+    #
+    #     try:
+    #         subprocess.run(f"pg_dump -Fc -d {database_name} -f {ROOT}{self.instance_name}/backup_temp/dump.sql", shell=True)
+    #         # Create zip with dump.sql and filestore
+    #         subprocess.run(f"zip -r {ROOT}{self.instance_name}/backup_temp/{backup_name} {ROOT}{self.instance_name}/backup_temp/dump.sql {filestore_path}", shell=True)
+    #         subprocess.run(f"mv {ROOT}{self.instance_name}/backup_temp/{backup_name} {ROOT}{self.instance_name}/backups", shell=True)
+    #         print("Backup created")
+    #     except Exception as e:
+    #         print(e)
+
+    ############################
     # Service methods
     ############################
 
