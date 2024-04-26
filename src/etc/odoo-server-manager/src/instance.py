@@ -3,6 +3,7 @@ import pickle
 import subprocess
 import hashlib
 import datetime
+import requests
 
 from src.user import User
 from src.utils import check_if_port_is_free, check_if_port_is_valid, check_if_firewall_is_enabled, get_postgres_version, \
@@ -100,6 +101,12 @@ class Instance:
 
     def get_server_name(self):
         return self.server_name or f"{self.instance_name}.example.com"
+
+    def _get_master_pwd(self):
+        with open(f"{ROOT}{self.instance_name}/odoo.conf", "r") as f:
+            for line in f.readlines():
+                if "admin_passwd" in line:
+                    return line.split(" = ")[1].strip()
 
     ############################
     # Update methods
@@ -276,7 +283,7 @@ class Instance:
         subprocess.run(f"sudo rm -rf {ROOT}{self.instance_name}", shell=True)
 
     ############################
-    # Backup methods
+    # Backup and Restore methods
     ############################
 
     # def backup(self):
@@ -318,6 +325,22 @@ class Instance:
     #         print("Backup created")
     #     except Exception as e:
     #         print(e)
+        
+    def restore(self, zip_path, db_name="db_restore"):
+        master_pwd = self._get_master_pwd()
+        files = {
+            'backup_file': open(zip_path, 'rb')
+        }
+        data = {
+            'master_pwd': master_pwd,
+            'name': db_name,
+            'copy': 'false'
+        }
+        response = requests.post(f"http://localhost:{self.port}/web/database/restore", data=data, files=files)
+        if response.status_code == 200:
+            print("Restore successful")
+        else:
+            print("Restore failed: ", response.text)
 
     ############################
     # Service methods
