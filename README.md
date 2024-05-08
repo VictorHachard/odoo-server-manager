@@ -16,6 +16,14 @@ Then, unleash it onto your system:
 sudo apt install ./odoo-server-manager.deb -y
 ```
 
+All in one go:
+
+```bash
+wget https://github.com/VictorHachard/odoo-server-manager/releases/latest/download/odoo-server-manager.deb && \
+dpkg -s odoo-server-manager &> /dev/null && sudo apt remove odoo-server-manager -y; \
+sudo apt install ./odoo-server-manager.deb -y && rm odoo-server-manager.deb
+```
+
 ## Command Arsenal
 
 ### Deploying Your Troops (Create Instance)

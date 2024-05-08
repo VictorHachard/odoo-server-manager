@@ -32,58 +32,57 @@ PYTHON_DEPENDENCIES = [
     "libatlas-base-dev",
 ]
 
-MAN = """
-Odoo Server Manager Commands:
+MAN = """Odoo Server Manager Commands:
 
 List Instances (list):
-   - -d: Show details (optional).
-     e.g., list -d
+    -d: Show details (optional).
+    e.g. list -d
 
 Create Instance (create):
-   - -v: Odoo version (e.g., 16.0) [required]
-   - -d: Odoo date (e.g., 20211010) [optional]
-   - -p: Port (e.g., 8069) [required]
-   - -l: Longpolling port (e.g., 8072) [required]
-   - -n: Friendly name (optional)
-   - -s: Server name (optional)
-   - -ot: Odoo template (optional)
-   - -st: Service template (optional)
-   - -nt: Nginx template (optional)
-     e.g., create -v 16.0 -p 8069 -l 8072 -n odoo-16 
-     e.g., create -v 16.0 -p 8069 -l 8072 -n odoo-16 -s odoo-16.example.com -ot odoo-16.conf -st odoo-16.service -nt odoo-16.nginx
+    -v: Odoo version (e.g., 16.0) [required]
+    -d: Odoo date (e.g., 20211010) [optional]
+    -p: Port (e.g., 8069) [required]
+    -l: Longpolling port (e.g., 8072) [required]
+    -n: Friendly name (optional)
+    -s: Server name (optional)
+    -ot: Odoo template (optional)
+    -st: Service template (optional)
+    -nt: Nginx template (optional)
+    e.g. create -v 16.0 -p 8069 -l 8072 -n odoo-16 
+    e.g. create -v 16.0 -p 8069 -l 8072 -n odoo-16 -s odoo-16.example.com -ot odoo-16.conf -st odoo-16.service -nt odoo-16.nginx
 
 Reset Instance (reset):
-    - -i: Instance name [required]
-    - -t: Type (e.g., odoo, nginx, service) [required]
-        e.g., reset -i instance_name
+    -i: Instance name [required]
+    -t: Type (e.g., odoo, nginx, service) [required]
+    e.g. reset -i instance_name
 
 Update Instance (update):
-   - -i: Instance name [required]
-   - -d: Odoo date (e.g., 20211010) [optional]
-     e.g., update -i instance_name
-     e.g., update -i instance_name -d 20211010
+    -i: Instance name [required]
+    -d: Odoo date (e.g., 20211010) [optional]
+    e.g. update -i instance_name
+    e.g. update -i instance_name -d 20211010
 
 Add Dependency (add_dependency):
-   - -i: Instance name [required]
-   - -d: Dependency name [required]
-     e.g., add_dependency -i instance_name -d Babel
+    -i: Instance name [required]
+    -d: Dependency name [required]
+    e.g. add_dependency -i instance_name -d Babel
 
 Delete Instance (delete):
-   - -n: Instance name [required]
-     e.g., delete -n instance_name
+    -n: Instance name [required]
+    e.g. delete -n instance_name
 
 Add User (add_user):
-   - -i: Instance name [required]
-   - -u: Username [required]
-     e.g., add_user -i instance_name -u admin
+    -i: Instance name [required]
+    -u: Username [required]
+    e.g. add_user -i instance_name -u admin
 
 View Journal (journal):
-   - -i: Instance name [required]
-     e.g., journal -i instance_name
+    -i: Instance name [required]
+    e.g. journal -i instance_name
 
 Help (help):
-   - Shows this guide.
-     e.g., help
+    Shows this guide.
+    e.g. help
 """
 
 def find_args(
@@ -170,13 +169,11 @@ def construct_package_url(base_repo, ubuntu_version, system_arch):
         package_url = f"{base_repo}wkhtmltox_0.12.6.1-3.{ubuntu_version}_"
     else:
         print(f"Ubuntu version '{ubuntu_version}' not supported")
-        sys.exit(1)
 
     if system_arch:
         package_url += f"{system_arch}.deb"
     else:
         print("System architecture not supported")
-        sys.exit(1)
 
     return package_url
 
